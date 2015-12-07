@@ -33,7 +33,7 @@
 #include "os_windows.h"
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
-#include <Xinput.h>
+#include <xinput.h> // on unix the file is called "xinput.h", on windows I'm sure it won't mind
 
 #ifndef SAFE_RELEASE            // when Windows Media Device M? is not present
 #define SAFE_RELEASE(x) \

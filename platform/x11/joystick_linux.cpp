@@ -272,7 +272,7 @@ void joystick_linux::open_joystick(const char *p_path) {
         //check if the device supports basic gamepad events, prevents certain keyboards from
         //being detected as joysticks
         if (libevdev_has_event_type(dev, EV_ABS) && libevdev_has_event_type(dev, EV_KEY) &&
-                (libevdev_has_event_code(dev, EV_KEY, BTN_SOUTH) || libevdev_has_event_code(dev, EV_KEY, BTN_THUMBL) || libevdev_has_event_code(dev, EV_KEY, BTN_TOP))) {
+                (libevdev_has_event_code(dev, EV_KEY, BTN_A) || libevdev_has_event_code(dev, EV_KEY, BTN_THUMBL) || libevdev_has_event_code(dev, EV_KEY, BTN_TOP))) {
 
             char uid[128];
             String name = libevdev_get_name(dev);

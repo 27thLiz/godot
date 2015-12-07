@@ -32,6 +32,10 @@
 #include <wbemidl.h>
 #include <oleauto.h>
 
+#ifndef __GNUC__
+#define __builtin_bswap32 _byteswap_ulong
+#endif
+
 joystick_windows::joystick_windows() {
 
 }
@@ -108,11 +112,17 @@ bool joystick_windows::is_xinput_device(const GUID *p_guid) {
     bool bCleanupCOM = SUCCEEDED(hr);
 
     // Create WMI
+#ifdef MINGW_ENABLED // mingw doesn't have __uuidof ? so this is copied from SDL2
+
+	CoCreateInstance(CLSID_DirectInput8, NULL, CLSCTX_INPROC_SERVER, IID_IDirectInput8, (LPVOID*) &pIWbemLocator);
+
+#else
     hr = CoCreateInstance( __uuidof(WbemLocator),
                            NULL,
                            CLSCTX_INPROC_SERVER,
                            __uuidof(IWbemLocator),
                            (LPVOID*) &pIWbemLocator);
+#endif
     if( FAILED(hr) || pIWbemLocator == NULL )
         goto LCleanup;
 
@@ -225,7 +235,7 @@ bool joystick_windows::setup_dinput_joystick(const DIDEVICEINSTANCE* instance) {
     const GUID &guid = instance->guidProduct;
     char uid[128];
     sprintf(uid, "%08lx%04hx%04hx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
-            _byteswap_ulong(guid.Data1), guid.Data2, guid.Data3,
+			__builtin_bswap32(guid.Data1), guid.Data2, guid.Data3,
             guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
             guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
 
@@ -459,11 +469,24 @@ unsigned int joystick_windows::process_joysticks(unsigned int p_last_id) {
             }
         }
 
-        for (int j = 0; j < joy->joy_axis.size(); j++) {
+#ifdef MINGW_ENABLED // on mingw, these constants are not constants
+
+		int count = 6;
+		int axes[] = { DIJOFS_X, DIJOFS_Y, DIJOFS_Z, DIJOFS_RX, DIJOFS_RY, DIJOFS_RZ };
+		int values[] = { js.lX, js.lY, js.lZ, js.lRx, js.lRy, js.lRz };
+
+		for (int j = 0; j < joy->joy_axis.size(); j++) {
+			// Is this right? I can't tell. If it is, it could replace the switch
+			p_last_id = input->joy_axis(p_last_id, i, j, axis_correct(values[joy->joy_axis[j] - DIJOFS_X]));
+		};
+
+#else
+
+		for (int j = 0; j < joy->joy_axis.size(); j++) {
 
             switch (joy->joy_axis[j]) {
 
-            case DIJOFS_X:
+			case DIJOFS_X:
                 p_last_id = input->joy_axis(p_last_id, i, j, axis_correct(js.lX));
                 break;
             case DIJOFS_Y:
@@ -483,6 +506,7 @@ unsigned int joystick_windows::process_joysticks(unsigned int p_last_id) {
                 break;
             }
         }
+#endif
 
     }
     return p_last_id;
