@@ -476,8 +476,17 @@ unsigned int joystick_windows::process_joysticks(unsigned int p_last_id) {
 		int values[] = { js.lX, js.lY, js.lZ, js.lRx, js.lRy, js.lRz };
 
 		for (int j = 0; j < joy->joy_axis.size(); j++) {
-			// Is this right? I can't tell. If it is, it could replace the switch
-			p_last_id = input->joy_axis(p_last_id, i, j, axis_correct(values[joy->joy_axis[j] - DIJOFS_X]));
+			// Can't do this, axis numbers aren't sequential
+			// They're 0, 4, 8, 12, ... but I don't know if we can assume that's the case in every windows with every joystick. If yes, feel free to change
+			// p_last_id = input->joy_axis(p_last_id, i, j, axis_correct(values[joy->joy_axis[j] - DIJOFS_X])); // can't do this, axis numbers aren't sequential
+
+			// intead, a for
+			for (int k=0; k<count; k++) {
+				if (joy->joy_axis[j] == axes[k]) {
+					p_last_id = input->joy_axis(p_last_id, i, j, axis_correct(values[k]));
+					break;
+				};
+			};
 		};
 
 #else
