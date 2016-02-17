@@ -31,7 +31,7 @@
 #ifdef JOYDEV_ENABLED
 
 #include "joystick_linux.h"
-
+#include "os/os.h"
 #include <linux/input.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -44,7 +44,6 @@
 #define LONG_BITS  (sizeof(long) * 8)
 #define test_bit(nr, addr)  (((1UL << ((nr) % LONG_BITS)) & ((addr)[(nr) / LONG_BITS])) != 0)
 #define NBITS(x) ((((x)-1)/LONG_BITS)+1)
-
 static const char* ignore_str = "/dev/input/js";
 
 joystick_linux::Joystick::Joystick() {
@@ -82,12 +81,15 @@ joystick_linux::joystick_linux(InputDefault *in)
 {
 	exit_udev = false;
 	input = in;
-	joy_mutex = Mutex::create();
+	last_ticks = 0;
+	joy_semaphore = Semaphore::create();
+	update_semaphore = Semaphore::create();
 	joy_thread = Thread::create(joy_thread_func, this);
 }
 
 joystick_linux::~joystick_linux() {
 	exit_udev = true;
+	joy_semaphore->post();
 	Thread::wait_to_finish(joy_thread);
 	close_joystick();
 }
@@ -136,9 +138,7 @@ void joystick_linux::enumerate_joysticks(udev *p_udev) {
 
 			String devnode_str = devnode;
 			if (devnode_str.find(ignore_str) == -1) {
-				joy_mutex->lock();
 				open_joystick(devnode);
-				joy_mutex->unlock();
 			}
 		}
 		udev_device_unref(dev);
@@ -155,46 +155,46 @@ void joystick_linux::monitor_joysticks(udev *p_udev) {
 	int fd = udev_monitor_get_fd(mon);
 
 	while (!exit_udev) {
+		joy_semaphore->wait();
+		if (can_update()) {
+			fd_set fds;
+			struct timeval tv;
+			int ret;
 
-		fd_set fds;
-		struct timeval tv;
-		int ret;
+			FD_ZERO(&fds);
+			FD_SET(fd, &fds);
+			tv.tv_sec = 0;
+			tv.tv_usec = 0;
 
-		FD_ZERO(&fds);
-		FD_SET(fd, &fds);
-		tv.tv_sec = 0;
-		tv.tv_usec = 0;
+			ret = select(fd+1, &fds, NULL, NULL, &tv);
 
-		ret = select(fd+1, &fds, NULL, NULL, &tv);
+			/* Check if our file descriptor has received data. */
+			if (ret > 0 && FD_ISSET(fd, &fds)) {
+				/* Make the call to receive the device.
+				   select() ensured that this will not block. */
+				dev = udev_monitor_receive_device(mon);
 
-		/* Check if our file descriptor has received data. */
-		if (ret > 0 && FD_ISSET(fd, &fds)) {
-			/* Make the call to receive the device.
-			   select() ensured that this will not block. */
-			dev = udev_monitor_receive_device(mon);
+				if (dev && udev_device_get_devnode(dev) != 0) {
 
-			if (dev && udev_device_get_devnode(dev) != 0) {
+					String action = udev_device_get_action(dev);
+					const char* devnode = udev_device_get_devnode(dev);
+					if (devnode) {
 
-				joy_mutex->lock();
-				String action = udev_device_get_action(dev);
-				const char* devnode = udev_device_get_devnode(dev);
-				if (devnode) {
+						String devnode_str = devnode;
+						if (devnode_str.find(ignore_str) == -1) {
 
-					String devnode_str = devnode;
-					if (devnode_str.find(ignore_str) == -1) {
-
-						if (action == "add")
-							open_joystick(devnode);
-						else if (String(action) == "remove")
-							close_joystick(get_joy_from_path(devnode));
+							if (action == "add")
+								open_joystick(devnode);
+							else if (String(action) == "remove")
+								close_joystick(get_joy_from_path(devnode));
+						}
 					}
-				}
 
-				udev_device_unref(dev);
-				joy_mutex->unlock();
+					udev_device_unref(dev);
+				}
 			}
 		}
-		usleep(50000);
+		read_events();
 	}
 	//printf("exit udev\n");
 	udev_monitor_unref(mon);
@@ -204,17 +204,35 @@ void joystick_linux::monitor_joysticks(udev *p_udev) {
 void joystick_linux::monitor_joysticks() {
 
 	while (!exit_udev) {
-		joy_mutex->lock();
-		for (int i = 0; i < 32; i++) {
-			char fname[64];
-			sprintf(fname, "/dev/input/event%d", i);
-			if (attached_devices.find(fname) == -1) {
-				open_joystick(fname);
+
+		joy_semaphore->wait();
+
+		if (can_update()) {
+			for (int i = 0; i < 32; i++) {
+				char fname[64];
+				sprintf(fname, "/dev/input/event%d", i);
+				if (attached_devices.find(fname) == -1) {
+					open_joystick(fname);
+				}
 			}
 		}
-		joy_mutex->unlock();
-		usleep(1000000); // 1s
+		read_events();
 	}
+}
+
+bool joystick_linux::can_update() {
+#ifdef UDEV_ENABLED
+	return true;
+	int delay_time = 100000;
+#else
+	int delay_time = 1000000;
+#endif
+	uint64_t current_ticks = OS::get_singleton()->get_ticks_usec();
+	if (current_ticks - last_ticks > delay_time) {
+		last_ticks = current_ticks;
+		return true;
+	}
+	return false;
 }
 
 int joystick_linux::get_free_joy_slot() const {
@@ -412,26 +430,45 @@ InputDefault::JoyAxis joystick_linux::axis_correct(const input_absinfo *p_abs, i
 
 uint32_t joystick_linux::process_joysticks(uint32_t p_event_id) {
 
-	if (joy_mutex->try_lock() != OK) {
-		return p_event_id;
+	joy_semaphore->post();
+	update_semaphore->wait();
+	for (int i=0; i<JOYSTICKS_MAX; i++) {
+
+		if (joysticks[i].fd == -1) continue;
+		Joystick* joy = &joysticks[i];
+
+		p_event_id = input->joy_hat(p_event_id, i, joy->dpad);
+
+		for (int j = 0; j < JOY_BUTTON_MAX; j++) {
+			p_event_id = input->joy_button(p_event_id, i, j, joy->buttons[j]);
+		}
+		for (int j = 0; j < MAX_ABS; j++) {
+			int index = joy->abs_map[j];
+			if (index != -1) {
+				p_event_id = input->joy_axis(p_event_id, i, index, joy->curr_axis[index]);
+			}
+		}
 	}
+	return p_event_id;
+}
+
+void joystick_linux::read_events() {
 	for (int i=0; i<JOYSTICKS_MAX; i++) {
 
 		if (joysticks[i].fd == -1) continue;
 
 		input_event events[32];
 		Joystick* joy = &joysticks[i];
-
 		int len;
-
 		while ((len = read(joy->fd, events, (sizeof events))) > 0) {
 			len /= sizeof(events[0]);
+
 			for (int j = 0; j < len; j++) {
 
 				input_event &ev = events[j];
 				switch (ev.type) {
 				case EV_KEY:
-					p_event_id = input->joy_button(p_event_id, i, joy->key_map[ev.code], ev.value);
+					joy->buttons[joy->key_map[ev.code]] = ev.value;
 					break;
 
 				case EV_ABS:
@@ -443,8 +480,6 @@ uint32_t joystick_linux::process_joysticks(uint32_t p_event_id) {
 							else              joy->dpad |= InputDefault::HAT_MASK_RIGHT;
 						}
 						else joy->dpad &= ~(InputDefault::HAT_MASK_LEFT | InputDefault::HAT_MASK_RIGHT);
-
-						p_event_id = input->joy_hat(p_event_id, i, joy->dpad);
 						break;
 
 					case ABS_HAT0Y:
@@ -453,8 +488,6 @@ uint32_t joystick_linux::process_joysticks(uint32_t p_event_id) {
 							else              joy->dpad |= InputDefault::HAT_MASK_DOWN;
 						}
 						else joy->dpad &= ~(InputDefault::HAT_MASK_UP | InputDefault::HAT_MASK_DOWN);
-
-						p_event_id = input->joy_hat(p_event_id, i, joy->dpad);
 						break;
 
 					default:
@@ -468,17 +501,11 @@ uint32_t joystick_linux::process_joysticks(uint32_t p_event_id) {
 				}
 			}
 		}
-		for (int j = 0; j < MAX_ABS; j++) {
-			int index = joy->abs_map[j];
-			if (index != -1) {
-				p_event_id = input->joy_axis(p_event_id, i, index, joy->curr_axis[index]);
-			}
-		}
 		if (len == 0 || (len < 0 && errno != EAGAIN)) {
 			close_joystick(i);
 		};
 	}
-	joy_mutex->unlock();
-	return p_event_id;
+	update_semaphore->post();
 }
+
 #endif

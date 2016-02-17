@@ -33,6 +33,7 @@
 #ifdef JOYDEV_ENABLED
 #include "main/input_default.h"
 #include "os/thread.h"
+#include "os/semaphore.h"
 #include "os/mutex.h"
 
 struct input_absinfo;
@@ -55,6 +56,7 @@ private:
 
 	struct Joystick {
 		InputDefault::JoyAxis curr_axis[MAX_ABS];
+		int buttons[JOY_BUTTON_MAX];
 		int key_map[MAX_KEY - BT_MISC];
 		int abs_map[MAX_ABS];
 		int dpad;
@@ -68,17 +70,20 @@ private:
 		void reset();
 	};
 
+	uint64_t last_ticks;
 	bool exit_udev;
-	Mutex *joy_mutex;
+	Semaphore *joy_semaphore;
+	Semaphore *update_semaphore;
 	Thread *joy_thread;
 	InputDefault *input;
 	Joystick joysticks[JOYSTICKS_MAX];
 	Vector<String> attached_devices;
-
 	static void joy_thread_func(void *p_user);
 
 	int get_joy_from_path(String path) const;
 	int get_free_joy_slot() const;
+
+	bool can_update();
 
 	void setup_joystick_properties(int p_id);
 	void close_joystick(int p_id = -1);
@@ -87,6 +92,7 @@ private:
 	void monitor_joysticks(struct udev *_udev);
 #endif
 	void monitor_joysticks();
+	void read_events();
 	void run_joystick_thread();
 	void open_joystick(const char* path);
 
