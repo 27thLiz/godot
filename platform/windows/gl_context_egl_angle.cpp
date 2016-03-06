@@ -62,6 +62,7 @@ Error ContextEGLAngle::initialize() {
 	EGLConfig config = nullptr;
 	EGLint contextAttribs[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE, EGL_NONE };
 
+	/*
 	const EGLint displayAttributes[] =
 	{
 		EGL_PLATFORM_ANGLE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_TYPE_D3D9_ANGLE,
@@ -79,6 +80,8 @@ Error ContextEGLAngle::initialize() {
 	}
 
 	display = eglGetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE, EGL_DEFAULT_DISPLAY, displayAttributes);
+	//	*/
+	display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
 	if (display == EGL_NO_DISPLAY)
 	{

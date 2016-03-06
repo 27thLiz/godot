@@ -17,6 +17,9 @@
  * by filing a bug against product "OpenGL-ES" component "Registry".
  */
 
+#define GL_APICALL
+#define GL_APIENTRY
+
 #include <KHR/khrplatform.h>
 
 #ifndef GL_APICALL
