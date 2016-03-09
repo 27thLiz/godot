@@ -9313,7 +9313,10 @@ void RasterizerGLES2::_canvas_item_setup_shader_params(CanvasItemMaterial *mater
 		canvas_shader.set_uniform(CanvasShaderGLES2::TEXSCREEN_SCREEN_CLAMP,Color(float(x)/framebuffer.width,float(y)/framebuffer.height,float(x+viewport.width)/framebuffer.width,float(y+viewport.height)/framebuffer.height));
 		canvas_shader.set_uniform(CanvasShaderGLES2::TEXSCREEN_TEX,max_texture_units-1);
 		glActiveTexture(GL_TEXTURE0+max_texture_units-1);
+		DEBUG_TEST_ERROR("active texture");
 		glBindTexture(GL_TEXTURE_2D,framebuffer.sample_color);
+		DEBUG_TEST_ERROR("bind texture sample_color");
+
 		if (framebuffer.scale==1 && !canvas_texscreen_used) {
 #ifdef GLEW_ENABLED
 			if (current_rt) {
@@ -9322,13 +9325,17 @@ void RasterizerGLES2::_canvas_item_setup_shader_params(CanvasItemMaterial *mater
 				glReadBuffer(GL_BACK);
 			}
 #endif
+			DEBUG_TEST_ERROR("glCopyTexSubImage2D before");
 			if (current_rt) {
+				//printf("current_rt values: %i, %i, %i, %i, %i, %i, %i\n", viewport.x,viewport.y,viewport.x,viewport.y,viewport.width,viewport.height, GL_MAX_TEXTURE_SIZE);
 				glCopyTexSubImage2D(GL_TEXTURE_2D,0,viewport.x,viewport.y,viewport.x,viewport.y,viewport.width,viewport.height);
 				canvas_shader.set_uniform(CanvasShaderGLES2::TEXSCREEN_SCREEN_CLAMP,Color(float(x)/framebuffer.width,float(viewport.y)/framebuffer.height,float(x+viewport.width)/framebuffer.width,float(y+viewport.height)/framebuffer.height));
 				//window_size.height-(viewport.height+viewport.y)
 			} else {
+				//printf("values: %i, %i, %i, %i, %i, %i, %i\n", x,y,x,y,viewport.width,viewport.height);
 				glCopyTexSubImage2D(GL_TEXTURE_2D,0,x,y,x,y,viewport.width,viewport.height);
 			}
+			DEBUG_TEST_ERROR("glCopyTexSubImage2D after");
 //			if (current_clip) {
 //			//	print_line(" a clip ");
 //			}
@@ -10526,6 +10533,7 @@ void RasterizerGLES2::_update_framebuffer() {
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer.color, 0);
+
 #
 	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -10560,6 +10568,9 @@ void RasterizerGLES2::_update_framebuffer() {
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer.sample_color, 0);
+	//printf("creating sample_color with sizes with sizes %i, %i\n", framebuffer.width, framebuffer.height);
+	DEBUG_TEST_ERROR("Create framebuffer.sample_color");
+
 #
 	status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);

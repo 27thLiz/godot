@@ -1675,6 +1675,7 @@ bool ValidateCopyTexImageParametersBase(ValidationContext *context,
 
     if (isSubImage)
     {
+		//printf("checking for size %i, %i\n", texture->getWidth(target, level), texture->getHeight(target, level));
         if (static_cast<size_t>(xoffset + width) > texture->getWidth(target, level) ||
             static_cast<size_t>(yoffset + height) > texture->getHeight(target, level) ||
             static_cast<size_t>(zoffset) >= texture->getDepth(target, level))
