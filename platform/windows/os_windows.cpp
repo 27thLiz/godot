@@ -39,6 +39,7 @@
 #include "drivers/windows/file_access_windows.h"
 #include "drivers/windows/dir_access_windows.h"
 
+#include "drivers/openvr/headers/openvr.h"
 
 #include "servers/visual/visual_server_raster.h"
 #include "servers/audio/audio_server_sw.h"
@@ -2158,6 +2159,10 @@ bool OS_Windows::is_joy_known(int p_device) {
 
 String OS_Windows::get_joy_guid(int p_device) const {
 	return input->get_joy_guid_remapped(p_device);
+}
+
+Rasterizer *OS_Windows::get_rasterizer() {
+	return rasterizer;
 }
 
 OS_Windows::OS_Windows(HINSTANCE _hInstance) {

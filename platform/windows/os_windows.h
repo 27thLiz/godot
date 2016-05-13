@@ -279,6 +279,8 @@ public:
 
 	virtual bool is_joy_known(int p_device);
 	virtual String get_joy_guid(int p_device) const;
+	
+	Rasterizer* get_rasterizer();
 
 	OS_Windows(HINSTANCE _hInstance);
 	~OS_Windows();
