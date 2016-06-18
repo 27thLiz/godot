@@ -1059,7 +1059,13 @@ void OS_Windows::initialize(const VideoMode& p_desired,int p_video_driver,int p_
 	};
 
 #if defined(OPENGL_ENABLED) || defined(GLES2_ENABLED) || defined(LEGACYGL_ENABLED)
+
+ #ifdef ANGLE_ENABLED
+	gl_context = memnew( ContextEGLAngle(hWnd));
+ #else
 	gl_context = memnew( ContextGL_Win(hWnd,false) );
+ #endif
+
 	gl_context->initialize();
 	rasterizer = memnew( RasterizerGLES2 );
 #else

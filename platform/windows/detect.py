@@ -65,7 +65,7 @@
 #####
 # Notes about Mingw under Windows :
 #
-#	- this is the MinGW version from http://mingw.org/
+#	- this is the MinGW version from http://mingw.org/ 
 #	- install it into a path that does not contain spaces
 #		( example : "C:/MinGW" )
 #	- several DirectX headers might be missing. You can copy them into
@@ -163,6 +163,8 @@ def get_opts():
 	return [
 		('mingw_prefix','Mingw Prefix',mingw32),
 		('mingw_prefix_64','Mingw Prefix 64 bits',mingw64),
+		('angle', 'use ANGLE', 'no'),
+		('theora_opt', "Use Theora's optimized inline assembly", "yes"),
 	]
 
 def get_flags():
@@ -236,11 +238,25 @@ def configure(env):
 		env.Append(CCFLAGS=['/DWIN32'])
 		env.Append(CCFLAGS=['/DTYPED_METHOD_BIND'])
 
-		env.Append(CCFLAGS=['/DGLES2_ENABLED'])
+		if env['angle'] == "yes":
+			env.Append(CCFLAGS=['/DGLES2_ENABLED'])
+			env.Append(CCFLAGS=['/DANGLE_ENABLED'])
+			env.Append(CPPPATH=['#drivers/angle/include'])
 
-		LIBS=['winmm','opengl32','dsound','kernel32','ole32','oleaut32','user32','gdi32', 'IPHLPAPI','Shlwapi', 'wsock32', 'shell32','advapi32','dinput8','dxguid']
+		else:
+			env.Append(CCFLAGS=['/DGLES2_ENABLED'])
+
+		LIBS=['winmm','dsound','kernel32','ole32','oleaut32','user32','gdi32', 'IPHLPAPI','Shlwapi', 'wsock32', 'shell32','advapi32','dinput8','dxguid']
+
+
+		if env['angle']=="yes":
+			LIBS += ['d3d9']
+		else:
+			LIBS += ['opengl32']
+
+
 		env.Append(LINKFLAGS=[p+env["LIBSUFFIX"] for p in LIBS])
-
+		
 		env.Append(LIBPATH=[os.getenv("WindowsSdkDir")+"/Lib"])
                 if (os.getenv("DXSDK_DIR")):
                         DIRECTX_PATH=os.getenv("DXSDK_DIR")

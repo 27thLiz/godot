@@ -3,6 +3,7 @@ Import('env')
 
 common_win=[
 	"context_gl_win.cpp",
+	"gl_context_egl_angle.cpp",
 	"os_windows.cpp",
 	"ctxgl_procaddr.cpp",
 	"key_mapping_win.cpp",

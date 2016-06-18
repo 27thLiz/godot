@@ -30,6 +30,9 @@
 //#else
 //#include <alloca.h>
 //#endif
+#ifdef ANGLE_ENABLED
+#define GL_GLEXT_PROTOTYPES // wtf?
+#else
 #define GLES2_INCLUDE_H "gl_context/GL/glew.h"
-
+#endif
 

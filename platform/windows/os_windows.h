@@ -33,7 +33,6 @@
 
 #include "os/input.h"
 #include "os/os.h"
-#include "context_gl_win.h"
 #include "servers/visual_server.h"
 #include "servers/visual/rasterizer.h"
 #include "servers/physics/physics_server_sw.h"
@@ -54,6 +53,13 @@
 #include "key_mapping_win.h"
 #include <windowsx.h>
 #include <io.h>
+
+#ifdef ANGLE_ENABLED
+#include "gl_context_egl_angle.h"
+#else
+#include "context_gl_win.h"
+#endif
+
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -92,9 +98,7 @@ class OS_Windows : public OS {
 	int old_x,old_y;
 	Point2i center;
 	unsigned int last_id;
-#if defined(OPENGL_ENABLED) || defined(LEGACYGL_ENABLED) || defined(GLES2_ENABLED)
-	ContextGL_Win *gl_context;
-#endif
+	ContextGL *gl_context;
 	VisualServer *visual_server;
 	Rasterizer *rasterizer;
 	PhysicsServer *physics_server;

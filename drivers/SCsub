@@ -62,6 +62,9 @@ if (env["squish"]=="yes" and env["tools"]=="yes"):
 if (env["freetype"]!="no"):
 	SConscript("freetype/SCsub");
 
+if env["angle"] == "yes":
+	SConscript("angle/SCsub")
+
 num = 0
 cur_base = ""
 total = len(env.drivers_sources)
