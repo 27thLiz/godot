@@ -219,7 +219,7 @@ private:
 	bool has_gyro;
 
 	Vector3 scale_magneto(const Vector3 p_magnetometer);
-	Matrix3 combine_acc_mag(const Vector3 &p_grav, const Vector3 &p_magneto);
+	Basis combine_acc_mag(const Vector3 &p_grav, const Vector3 &p_magneto);
 
 public:
 	virtual bool is_key_pressed(int p_scancode) const;

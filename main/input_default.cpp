@@ -1415,7 +1415,7 @@ Vector3 InputDefault::scale_magneto(const Vector3 p_magnetometer) {
 	return mag_scaled;
 };
 
-Matrix3 InputDefault::combine_acc_mag(const Vector3 &p_grav, const Vector3 &p_magneto) {
+Basis InputDefault::combine_acc_mag(const Vector3 &p_grav, const Vector3 &p_magneto) {
 	// yup, stock standard cross product solution...
 	Vector3 up = -p_grav.normalized();
 
@@ -1426,7 +1426,7 @@ Matrix3 InputDefault::combine_acc_mag(const Vector3 &p_grav, const Vector3 &p_ma
 	magneto.normalize();
 
 	// We use our gravity and magnetometer vectors to construct our matrix
-	Matrix3 acc_mag_m3;
+	Basis acc_mag_m3;
 	acc_mag_m3.elements[0] = -magneto_east;
 	acc_mag_m3.elements[1] = up;
 	acc_mag_m3.elements[2] = magneto;
@@ -1491,7 +1491,7 @@ void InputDefault::set_tracker_transform_from_sensors(int p_idx, float p_delta_t
 
 		if (has_gyro) {
 			// start with applying our gyro (do NOT smooth our gyro!)
-			Matrix3 rotate;
+			Basis rotate;
 			rotate.rotate(transform.basis.get_axis(0), -gyro.x * p_delta_time);
 			rotate.rotate(transform.basis.get_axis(1), -gyro.y * p_delta_time);
 			rotate.rotate(transform.basis.get_axis(2), -gyro.z * p_delta_time);
@@ -1506,7 +1506,7 @@ void InputDefault::set_tracker_transform_from_sensors(int p_idx, float p_delta_t
 			Quat transform_quat(transform.basis);
 			Quat acc_mag_quat(combine_acc_mag(grav, magneto));
 			transform_quat = transform_quat.slerp(acc_mag_quat, 0.1);
-			transform.basis = Matrix3(transform_quat);
+			transform.basis = Basis(transform_quat);
 		} else if (has_grav) {
 			// use gravity vector to make sure down is down...
 			// transform gravity into our world space
@@ -1520,7 +1520,7 @@ void InputDefault::set_tracker_transform_from_sensors(int p_idx, float p_delta_t
 				Vector3 axis = grav_adj.cross(down);
 				axis.normalize();
 
-				Matrix3 drift_compensation(axis, -acos(dot));
+				Basis drift_compensation(axis, -acos(dot));
 				transform.basis = drift_compensation * transform.basis;
 			};
 		};
