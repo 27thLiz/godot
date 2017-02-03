@@ -31,6 +31,7 @@
 
 
 #include "os/input.h"
+#include "drivers/unix/os_unix.h"
 #include "servers/visual_server.h"
 #include "servers/visual/visual_server_wrap_mt.h"
 #include "servers/visual/rasterizer.h"
@@ -44,7 +45,7 @@
 #include "servers/physics_2d/physics_2d_server_wrap_mt.h"
 #include "main/input_default.h"
 
-class OS_Tizen : public OS {
+class OS_Tizen : public OS_Unix {
 
 	Rasterizer *rasterizer;
 	VisualServer *visual_server;

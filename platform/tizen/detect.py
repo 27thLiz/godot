@@ -101,7 +101,7 @@ def configure(env):
     env.Append(CPPFLAGS=['-march='+march])
     if (arch == 'armv7'):
 	env.Append(CPPFLAGS=['-mfloat-abi=softfp', '-mfpu=vfpv3-d16','-mtune=cortex-a8'])
-    env.Append(CPPFLAGS=['-DTIZEN_ENABLED']) #'-DGLES2_ENABLED',
+    env.Append(CPPFLAGS=['-DTIZEN_ENABLED', '-DUNIX_ENABLED', '-DGLES2_ENABLED']) #,
     env.Append(LIBS=['pthread', 'z'])#'GL',
     #if (platform.system() == "Linux"):
     #    env.Append(LIBS='dl')

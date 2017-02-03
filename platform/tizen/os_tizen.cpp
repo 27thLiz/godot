@@ -93,6 +93,23 @@ const char *OS_Tizen::get_audio_driver_name(int p_driver) const {
 
 void OS_Tizen::initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver) {
 	dlog_print(DLOG_ERROR, LOG_TAG, "INITIALIZE GODOT!!\n");
+	//AudioDriverManagerSW::add_driver()
+	rasterizer = memnew(RasterizerGLES2(false, true, true, false));
+	//rasterizer->set_force_16_bits_fbo(use_16bits_fbo);
+	visual_server = memnew(VisualServerRaster(rasterizer));
+	visual_server->init();
+	visual_server->cursor_set_visible(false, 0);
+
+
+	sample_manager = memnew(SampleManagerMallocSW);
+
+
+	physics_server = memnew(PhysicsServerSW);
+	physics_server->init();
+	physics_2d_server = Physics2DServerWrapMT::init_server<Physics2DServerSW>();
+	physics_2d_server->init();
+
+	input = memnew(InputDefault);
 }
 
 void OS_Tizen::vprint(const char *p_format, va_list ap ) {
@@ -309,8 +326,8 @@ bool OS_Tizen::is_vsync_enabled() const {
 }
 
 
-void OS_Tizen::initialize_core()
-{
+void OS_Tizen::initialize_core() {
+	OS_Unix::initialize_core();
 }
 
 void OS_Tizen::finalize_core()
