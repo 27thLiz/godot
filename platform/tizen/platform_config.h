@@ -33,5 +33,6 @@
 #include <stdlib.h>
 #define PTHREAD_BSD_SET_NAME
 #endif
-
-#define GLES2_INCLUDE_H "GL/glew.h"
+#include <Evas_GL_GLES2_Helpers.h>
+#define GLES2_INCLUDE_H <Evas_GL_GLES2_Helpers.h>
+EVAS_GL_GLOBAL_GLES2_DECLARE();

@@ -1,4 +1,3 @@
-
 import os
 import sys
 import platform
@@ -96,6 +95,7 @@ def configure(env):
 
     env.Append(CPPFLAGS=['-gcc-toolchain', tools_path, '-fPIE', '-Wno-gnu'])
     env.Append(CPPFLAGS=['-target', target+'-tizen-linux-gnueabi'])
+    #env.Append(LINKFLAGS=['-pie'])
     env.Append(LINKFLAGS=['--gcc-toolchain="' + tizen_root + '/tools/'+target+'-linux-gnueabi-gcc-4.9"'])
     env.Append(LINKFLAGS=['-target', target+'-tizen-linux-gnueabi', '-ccc-gcc-name', target+'-linux-gnueabi-g++'])
     env.Append(CPPFLAGS=['-march='+march])

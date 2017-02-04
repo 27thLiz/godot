@@ -59,7 +59,19 @@ OS_Tizen::~OS_Tizen() {
 }
 
 void OS_Tizen::run() {
+	force_quit = false;
+	if (!main_loop)
+		return;
+	main_loop->init();
 
+
+	while (!force_quit) {
+		//TODO: event processing
+
+		if (Main::iteration())
+			break;
+	}
+	main_loop->finish();
 }
 
 OS_Tizen::OS_Tizen()
