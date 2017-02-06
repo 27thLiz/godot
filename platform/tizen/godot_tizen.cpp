@@ -32,7 +32,8 @@
 int main(int argc, char* argv[]) {
 
 	OS_Tizen os;
-
+	//dlog_print(DLOG_ERROR, "godot", "INIT TIZEN !!");
+	//os.print("OS TIZEN INIT !!");
 	Error err  = Main::setup(argv[0],argc-1,&argv[1]);
 	if (err!=OK)
 		return 255;

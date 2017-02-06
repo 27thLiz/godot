@@ -62,6 +62,7 @@ def configure(env):
     env["AR"] = tools_path + "/bin/"+abi_name+"ar"
     env["RANLIB"] = tools_path + "/bin/"+abi_name+"ranlib"
     env["AS"] = tools_path + "/bin/"+abi_name+"as"
+    env.Append(LINKFLAGS=['-pie', '-rdynamic'])
     if (env["target"] == "release"):
 
         if (env["debug_release"] == "yes"):
@@ -74,7 +75,6 @@ def configure(env):
         env.Append(CCFLAGS=['-O2', '-ffast-math', '-DDEBUG_ENABLED'])
         if (env["debug_release"] == "yes"):
             env.Append(CCFLAGS=['-g2'])
-
     elif (env["target"] == "debug"):
         env.Append(CCFLAGS=['-g2', '-Wall', '-DDEBUG_ENABLED', '-DDEBUG_MEMORY_ENABLED'])
     if (env["tizen_arch"] == 'x86'):
@@ -95,14 +95,13 @@ def configure(env):
 
     env.Append(CPPFLAGS=['-gcc-toolchain', tools_path, '-fPIE', '-Wno-gnu'])
     env.Append(CPPFLAGS=['-target', target+'-tizen-linux-gnueabi'])
-    #env.Append(LINKFLAGS=['-pie'])
     env.Append(LINKFLAGS=['--gcc-toolchain="' + tizen_root + '/tools/'+target+'-linux-gnueabi-gcc-4.9"'])
     env.Append(LINKFLAGS=['-target', target+'-tizen-linux-gnueabi', '-ccc-gcc-name', target+'-linux-gnueabi-g++'])
     env.Append(CPPFLAGS=['-march='+march])
-    if (arch == 'armv7'):
+    if (arch == 'armv7'):  
 	env.Append(CPPFLAGS=['-mfloat-abi=softfp', '-mfpu=vfpv3-d16','-mtune=cortex-a8'])
-    env.Append(CPPFLAGS=['-DTIZEN_ENABLED', '-DUNIX_ENABLED', '-DGLES2_ENABLED']) #,
-    env.Append(LIBS=['pthread', 'z'])#'GL',
+    env.Append(CPPFLAGS=['-DTIZEN_ENABLED', '-DUNIX_ENABLED']) #,'-DGLES2_ENABLED'
+    env.Append(LIBS=['pthread', 'z'])#,
     #if (platform.system() == "Linux"):
     #    env.Append(LIBS='dl')
     #env.Append(CPPFLAGS=['-DMPC_FIXED_POINT'])
@@ -118,10 +117,10 @@ def configure(env):
 
     import methods
 
-    #env.Append(BUILDERS={'GLSL120': env.Builder(action=methods.build_legacygl_headers, suffix='glsl.h', src_suffix='.glsl')})
-    #env.Append(BUILDERS={'GLSL': env.Builder(action=methods.build_glsl_headers, suffix='glsl.h', src_suffix='.glsl')})
-    #env.Append(BUILDERS={'GLSL120GLES': env.Builder(action=methods.build_gles2_headers, suffix='glsl.h', src_suffix='.glsl')})
-    #env.Append( BUILDERS = { 'HLSL9' : env.Builder(action = methods.build_hlsl_dx9_headers, suffix = 'hlsl.h',src_suffix = '.hlsl') } )
+    env.Append(BUILDERS={'GLSL120': env.Builder(action=methods.build_legacygl_headers, suffix='glsl.h', src_suffix='.glsl')})
+    env.Append(BUILDERS={'GLSL': env.Builder(action=methods.build_glsl_headers, suffix='glsl.h', src_suffix='.glsl')})
+    env.Append(BUILDERS={'GLSL120GLES': env.Builder(action=methods.build_gles2_headers, suffix='glsl.h', src_suffix='.glsl')})
+    env.Append( BUILDERS = { 'HLSL9' : env.Builder(action = methods.build_hlsl_dx9_headers, suffix = 'hlsl.h',src_suffix = '.hlsl') } )
 
     if (env["use_static_cpp"] == "yes"):
         env.Append(LINKFLAGS=['-static-libstdc++'])

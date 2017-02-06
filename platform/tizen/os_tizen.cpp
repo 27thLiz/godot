@@ -26,8 +26,18 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+#include "drivers/unix/memory_pool_static_malloc.h"
+#include "os/memory_pool_dynamic_static.h"
 #include "servers/visual/visual_server_raster.h"
 #include "drivers/gles2/rasterizer_gles2.h"
+#include "drivers/unix/thread_posix.h"
+#include "drivers/unix/semaphore_posix.h"
+#include "drivers/unix/mutex_posix.h"
+#include "drivers/unix/file_access_unix.h"
+#include "drivers/unix/dir_access_unix.h"
+#include "drivers/unix/tcp_server_posix.h"
+#include "drivers/unix/stream_peer_tcp_posix.h"
+#include "drivers/unix/packet_peer_udp_posix.h"
 #include "os_tizen.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,7 +49,6 @@
 #include <Elementary.h>
 #include <system_settings.h>
 #include <efl_extension.h>
-#include <dlog.h>
 
 #include "main/main.h"
 #ifdef  LOG_TAG
@@ -48,7 +57,7 @@
 #define LOG_TAG "godot"
 
 #if !defined(PACKAGE)
-#define PACKAGE "org.godotengine.godot"
+#define PACKAGE "org.example.godot"
 #endif
 
 
@@ -74,9 +83,10 @@ void OS_Tizen::run() {
 	main_loop->finish();
 }
 
-OS_Tizen::OS_Tizen()
-{
-
+OS_Tizen::OS_Tizen() {
+	//print_line("OS_TIZEN INIT");
+	print("OS constructor");
+	//print_line("but this doesn't work???");
 }
 
 void OS_Tizen::delete_main_loop() {
@@ -106,12 +116,13 @@ const char *OS_Tizen::get_audio_driver_name(int p_driver) const {
 void OS_Tizen::initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver) {
 	dlog_print(DLOG_ERROR, LOG_TAG, "INITIALIZE GODOT!!\n");
 	//AudioDriverManagerSW::add_driver()
+#ifdef GLES2_ENABLED
 	rasterizer = memnew(RasterizerGLES2(false, true, true, false));
 	//rasterizer->set_force_16_bits_fbo(use_16bits_fbo);
 	visual_server = memnew(VisualServerRaster(rasterizer));
 	visual_server->init();
 	visual_server->cursor_set_visible(false, 0);
-
+#endif
 
 	sample_manager = memnew(SampleManagerMallocSW);
 
@@ -339,11 +350,23 @@ bool OS_Tizen::is_vsync_enabled() const {
 
 
 void OS_Tizen::initialize_core() {
-	OS_Unix::initialize_core();
+	//OS_Unix::initialize_core();
+	ThreadPosix::make_default();
+	SemaphorePosix::make_default();
+	MutexPosix::make_default();
+#ifndef NO_NETWORK
+	TCPServerPosix::make_default();
+	StreamPeerTCPPosix::make_default();
+	PacketPeerUDPPosix::make_default();
+	IP_Unix::make_default();
+#endif
+	static MemoryPoolStaticMalloc *mempool_static=NULL;
+	static MemoryPoolDynamicStatic *mempool_dynamic=NULL;
+	mempool_static = new MemoryPoolStaticMalloc;
+	mempool_dynamic = memnew(MemoryPoolDynamicStatic);
 }
 
-void OS_Tizen::finalize_core()
-{
+void OS_Tizen::finalize_core() {
 }
 
 void OS_Tizen::vprint(const char *p_format, va_list p_list, bool p_stderr)
