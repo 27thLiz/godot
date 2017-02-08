@@ -68,6 +68,7 @@ OS_Tizen::~OS_Tizen() {
 }
 
 void OS_Tizen::run() {
+	print_line("TIZEN: starting main loop");
 	force_quit = false;
 	if (!main_loop)
 		return;
@@ -87,10 +88,19 @@ OS_Tizen::OS_Tizen() {
 	//print_line("OS_TIZEN INIT");
 	print("OS constructor");
 	//print_line("but this doesn't work???");
+	AudioDriverManagerSW::add_driver(&audio_driver_dummy);
+	event_id = 0;
+
 }
 
 void OS_Tizen::delete_main_loop() {
-	memdelete(main_loop);
+	if (main_loop)
+		memdelete(main_loop);
+	main_loop = NULL;
+}
+
+void OS_Tizen::_process_events() {
+
 }
 
 int OS_Tizen::get_video_driver_count() const {
@@ -132,7 +142,9 @@ void OS_Tizen::initialize(const VideoMode &p_desired, int p_video_driver, int p_
 	physics_2d_server = Physics2DServerWrapMT::init_server<Physics2DServerSW>();
 	physics_2d_server->init();
 
+	print_line("init input");
 	input = memnew(InputDefault);
+	print_line("init complete");
 }
 
 void OS_Tizen::vprint(const char *p_format, va_list ap ) {
@@ -152,7 +164,20 @@ void OS_Tizen::print(const char *p_format, ...) {
 	va_end(argp);
 }
 void OS_Tizen::finalize() {
+	print_line("TIZEN FINALIZE");
+	delete_main_loop();
+	memdelete(input);
+	memdelete(sample_manager);
+	audio_server->finish();
+	memdelete(audio_server);
+#ifdef GLES2_ENABLED
+	visual_server->finish();
+	memdelete(visual_server);
+	memdelete(rasterizer);
+#endif
 
+	physics_server->finish();
+	memdelete(physics_server);
 }
 
 void OS_Tizen::set_main_loop(MainLoop *p_main_loop) {
@@ -173,7 +198,7 @@ void OS_Tizen::set_mouse_mode(MouseMode p_mode) {
 }
 
 OS::MouseMode OS_Tizen::get_mouse_mode() const {
-
+	return MOUSE_MODE_HIDDEN;
 }
 
 void OS_Tizen::warp_mouse_pos(const Point2 &p_to) {
@@ -181,11 +206,11 @@ void OS_Tizen::warp_mouse_pos(const Point2 &p_to) {
 }
 
 Point2 OS_Tizen::get_mouse_pos() const {
-
+	return Point2();
 }
 
 int OS_Tizen::get_mouse_button_state() const {
-
+	return 0;
 }
 
 void OS_Tizen::set_window_title(const String &p_title) {
@@ -197,7 +222,7 @@ void OS_Tizen::set_icon(const Image &p_icon) {
 }
 
 MainLoop *OS_Tizen::get_main_loop() const {
-
+	return main_loop;
 }
 
 bool OS_Tizen::can_draw() const {
@@ -209,7 +234,7 @@ void OS_Tizen::set_clipboard(const String &p_text) {
 }
 
 String OS_Tizen::get_clipboard() const {
-
+	return ""; //FIXME
 }
 
 void OS_Tizen::release_rendering_thread() {
@@ -245,11 +270,11 @@ void OS_Tizen::get_fullscreen_mode_list(List<VideoMode> *p_list, int p_screen) c
 }
 
 int OS_Tizen::get_screen_count() const {
-
+	return 1;
 }
 
 int OS_Tizen::get_current_screen() const {
-
+	return 0;
 }
 
 void OS_Tizen::set_current_screen(int p_screen) {
@@ -257,7 +282,7 @@ void OS_Tizen::set_current_screen(int p_screen) {
 }
 
 Point2 OS_Tizen::get_screen_position(int p_screen) const {
-
+	return Point2();
 }
 
 Size2 OS_Tizen::get_screen_size(int p_screen) const {
@@ -289,7 +314,7 @@ void OS_Tizen::set_window_fullscreen(bool p_enabled) {
 }
 
 bool OS_Tizen::is_window_fullscreen() const {
-
+	return true;
 }
 
 void OS_Tizen::set_window_resizable(bool p_enabled) {
@@ -297,7 +322,7 @@ void OS_Tizen::set_window_resizable(bool p_enabled) {
 }
 
 bool OS_Tizen::is_window_resizable() const {
-
+	return false;
 }
 
 void OS_Tizen::set_window_minimized(bool p_enabled) {
@@ -305,7 +330,7 @@ void OS_Tizen::set_window_minimized(bool p_enabled) {
 }
 
 bool OS_Tizen::is_window_minimized() const {
-
+	return false;
 }
 
 void OS_Tizen::set_window_maximized(bool p_enabled) {
@@ -313,7 +338,7 @@ void OS_Tizen::set_window_maximized(bool p_enabled) {
 }
 
 bool OS_Tizen::is_window_maximized() const {
-
+	return true;
 }
 
 void OS_Tizen::request_attention() {
@@ -348,6 +373,8 @@ bool OS_Tizen::is_vsync_enabled() const {
 	return false; // FIXME
 }
 
+static MemoryPoolStaticMalloc *mempool_static=NULL;
+static MemoryPoolDynamicStatic *mempool_dynamic=NULL;
 
 void OS_Tizen::initialize_core() {
 	//OS_Unix::initialize_core();
@@ -360,13 +387,15 @@ void OS_Tizen::initialize_core() {
 	PacketPeerUDPPosix::make_default();
 	IP_Unix::make_default();
 #endif
-	static MemoryPoolStaticMalloc *mempool_static=NULL;
-	static MemoryPoolDynamicStatic *mempool_dynamic=NULL;
+
 	mempool_static = new MemoryPoolStaticMalloc;
 	mempool_dynamic = memnew(MemoryPoolDynamicStatic);
 }
 
 void OS_Tizen::finalize_core() {
+	if (mempool_dynamic)
+		memdelete(mempool_dynamic);
+	delete mempool_static;
 }
 
 void OS_Tizen::vprint(const char *p_format, va_list p_list, bool p_stderr)
@@ -385,12 +414,12 @@ Error OS_Tizen::kill(const ProcessID &p_pid)
 {
 }
 
-bool OS_Tizen::has_environment(const String &p_var) const
-{
+bool OS_Tizen::has_environment(const String &p_var) const {
+	return false;
 }
 
-String OS_Tizen::get_environment(const String &p_var) const
-{
+String OS_Tizen::get_environment(const String &p_var) const {
+	return "";
 }
 
 OS::Date OS_Tizen::get_date(bool local) const
@@ -409,6 +438,6 @@ void OS_Tizen::delay_usec(uint32_t p_usec) const
 {
 }
 
-uint64_t OS_Tizen::get_ticks_usec() const
-{
+uint64_t OS_Tizen::get_ticks_usec() const {
+	return 0;
 }

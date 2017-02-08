@@ -41,6 +41,7 @@
 #include "servers/spatial_sound/spatial_sound_server_sw.h"
 #include "servers/spatial_sound_2d/spatial_sound_2d_server_sw.h"
 #include "drivers/rtaudio/audio_driver_rtaudio.h"
+#include "servers/audio/audio_driver_dummy.h"
 #include "servers/physics_2d/physics_2d_server_sw.h"
 #include "servers/physics_2d/physics_2d_server_wrap_mt.h"
 #include "main/input_default.h"
@@ -54,12 +55,10 @@ class OS_Tizen : public OS {
 	List<String> args;
 	MainLoop *main_loop;
 	unsigned int event_id;
-	uint32_t last_button_state;
 
 	PhysicsServer *physics_server;
 	Physics2DServer *physics_2d_server;
 
-	MouseMode mouse_mode;
 	//Point2i center;
 
 	virtual void delete_main_loop();
@@ -70,13 +69,12 @@ class OS_Tizen : public OS {
 	SpatialSoundServerSW *spatial_sound_server;
 	SpatialSound2DServerSW *spatial_sound_2d_server;
 
+	AudioDriverDummy audio_driver_dummy;
 	bool force_quit;
-	bool minimized;
 
-	CursorShape current_cursor;
 	InputDefault *input;
 
-
+	void _process_events();
 
 protected:
 

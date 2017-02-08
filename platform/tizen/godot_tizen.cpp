@@ -35,8 +35,10 @@ int main(int argc, char* argv[]) {
 	//dlog_print(DLOG_ERROR, "godot", "INIT TIZEN !!");
 	//os.print("OS TIZEN INIT !!");
 	Error err  = Main::setup(argv[0],argc-1,&argv[1]);
-	if (err!=OK)
+	if (err!=OK) {
+		print_line("tizen: godot init error");
 		return 255;
+	}
 
 	if (Main::start())
 		os.run(); // it is actually the OS that decides how to run
