@@ -140,7 +140,7 @@ private:
 	SetKeepScreenOnFunc set_keep_screen_on_func;
 	AlertFunc alert_func;
 
-	//power_android *power_manager;
+	int tracker_id;
 
 public:
 	// functions used by main to initialize/deintialize the OS
@@ -227,8 +227,11 @@ public:
 	virtual String get_system_dir(SystemDir p_dir) const;
 
 	void process_accelerometer(const Vector3 &p_accelerometer);
+	void process_gravitymeter(const Vector3 &p_gravitymeter);
 	void process_magnetometer(const Vector3 &p_magnetometer);
 	void process_gyroscope(const Vector3 &p_gyroscope);
+	void process_tracker(Transform &p_transform);
+	void process_tracker_from_sensors(float p_delta_time);
 	void process_touch(int p_what, int p_pointer, const Vector<TouchPos> &p_points);
 	void process_joy_event(JoypadEvent p_event);
 	void process_event(InputEvent p_event);

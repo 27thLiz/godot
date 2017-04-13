@@ -134,6 +134,7 @@ void OSIPhone::initialize(const VideoMode &p_desired, int p_video_driver, int p_
 	physics_2d_server->init();
 
 	input = memnew(InputDefault);
+	tracker_id = -1; /* only initialize if we need it */
 
 /*
 #ifdef IOS_SCORELOOP_ENABLED
@@ -355,6 +356,21 @@ void OSIPhone::update_magnetometer(float p_x, float p_y, float p_z) {
 
 void OSIPhone::update_gyroscope(float p_x, float p_y, float p_z) {
 	input->set_gyroscope(Vector3(p_x, p_y, p_z));
+};
+
+void OSIPhone::update_tracker(Transform &p_transform) {
+	if (tracker_id == -1) {
+		tracker_id = input->add_tracker(Input::TRACKER_HMD, "iOS Device", true, false);
+	}
+	input->set_tracker_transform(tracker_id, p_transform);
+};
+
+void OSIPhone::update_tracker_from_sensors(float p_delta_time) {
+	if (tracker_id == -1) {
+		tracker_id = input->add_tracker(Input::TRACKER_HMD, "iOS Device", true, false);
+	}
+
+	input->set_tracker_transform_from_sensors(tracker_id, p_delta_time);
 };
 
 void OSIPhone::delete_main_loop() {

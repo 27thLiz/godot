@@ -86,12 +86,29 @@ void Input::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_custom_mouse_cursor", "image:Texture", "hotspot"), &Input::set_custom_mouse_cursor, DEFVAL(Vector2()));
 	ClassDB::bind_method(D_METHOD("parse_input_event", "event"), &Input::parse_input_event);
 
+	ClassDB::bind_method(D_METHOD("get_connected_trackers", "types"), &Input::get_connected_trackers);
+	ClassDB::bind_method(D_METHOD("get_tracker_type", "device"), &Input::get_tracker_type);
+	ClassDB::bind_method(D_METHOD("get_tracker_name", "device"), &Input::get_tracker_name);
+	ClassDB::bind_method(D_METHOD("get_tracker_transform", "device"), &Input::get_tracker_transform);
+	ClassDB::bind_method(D_METHOD("tracker_tracks_orientation", "device"), &Input::tracker_tracks_orientation);
+	ClassDB::bind_method(D_METHOD("tracker_tracks_position", "device"), &Input::tracker_tracks_position);
+
 	BIND_CONSTANT(MOUSE_MODE_VISIBLE);
 	BIND_CONSTANT(MOUSE_MODE_HIDDEN);
 	BIND_CONSTANT(MOUSE_MODE_CAPTURED);
 	BIND_CONSTANT(MOUSE_MODE_CONFINED);
 
+	BIND_CONSTANT(TRACKER_HMD);
+	BIND_CONSTANT(TRACKER_CONTROLLER);
+	BIND_CONSTANT(TRACKER_BASESTATION);
+	BIND_CONSTANT(TRACKER_UNKNOWN);
+	BIND_CONSTANT(TRACKER_HMD_AND_CONTROLLER);
+	BIND_CONSTANT(TRACKER_ANY_KNOWN);
+	BIND_CONSTANT(TRACKER_ANY);
+
 	ADD_SIGNAL(MethodInfo("joy_connection_changed", PropertyInfo(Variant::INT, "index"), PropertyInfo(Variant::BOOL, "connected")));
+	ADD_SIGNAL(MethodInfo("tracker_added", PropertyInfo(Variant::INT, "index"), PropertyInfo(Variant::INT, "type")));
+	ADD_SIGNAL(MethodInfo("tracker_removed", PropertyInfo(Variant::INT, "index"), PropertyInfo(Variant::INT, "type")));
 }
 
 void Input::get_argument_options(const StringName &p_function, int p_idx, List<String> *r_options) const {
