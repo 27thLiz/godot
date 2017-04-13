@@ -1481,6 +1481,7 @@ void VisualServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("texture_get_flags"), &VisualServer::texture_get_flags);
 	ClassDB::bind_method(D_METHOD("texture_get_width"), &VisualServer::texture_get_width);
 	ClassDB::bind_method(D_METHOD("texture_get_height"), &VisualServer::texture_get_height);
+	ClassDB::bind_method(D_METHOD("texture_get_texid"), &VisualServer::texture_get_texid);
 
 	ClassDB::bind_method(D_METHOD("texture_set_shrink_all_x2_on_set_data", "shrink"), &VisualServer::texture_set_shrink_all_x2_on_set_data);
 }

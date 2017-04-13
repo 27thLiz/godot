@@ -987,6 +987,15 @@ uint32_t RasterizerStorageGLES3::texture_get_height(RID p_texture) const {
 	return texture->height;
 }
 
+uint32_t RasterizerStorageGLES3::texture_get_texid(RID p_texture) const {
+
+	Texture *texture = texture_owner.get(p_texture);
+
+	ERR_FAIL_COND_V(!texture, 0);
+
+	return texture->tex_id;
+}
+
 void RasterizerStorageGLES3::texture_set_size_override(RID p_texture, int p_width, int p_height) {
 
 	Texture *texture = texture_owner.get(p_texture);
@@ -6500,7 +6509,7 @@ void RasterizerStorageGLES3::initialize() {
 	frame.count = 0;
 	frame.prev_tick = 0;
 	frame.delta = 0;
-	frame.current_rt=NULL;
+	frame.current_rt = NULL;
 	config.keep_original_textures = false;
 }
 
