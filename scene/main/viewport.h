@@ -121,6 +121,8 @@ private:
 	Listener *listener;
 	Set<Listener *> listeners;
 
+	bool stereo;
+
 	Camera *camera;
 	Set<Camera *> cameras;
 
@@ -317,6 +319,9 @@ protected:
 public:
 	Listener *get_listener() const;
 	Camera *get_camera() const;
+
+	void set_is_stereo(bool p_is_stereo);
+	bool is_stereo();
 
 	void set_as_audio_listener(bool p_enable);
 	bool is_audio_listener() const;

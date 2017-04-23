@@ -44,6 +44,9 @@ public:
 		RID self;
 		RID parent;
 
+		bool is_stereo; /* stereo buffer? */
+		real_t iod; /* distance between eyes, for 3DTV only */
+		real_t convergence; /* focus distance, distance at which objects will overlap for both eyes */
 		Size2i size;
 		RID camera;
 		RID scenario;
@@ -101,6 +104,10 @@ public:
 			viewport_to_screen = 0;
 			shadow_atlas_size = 0;
 			disable_3d = false;
+			is_stereo = false;
+			///@TODO we need to make this settable, this is for 3DTV support only which is still a work in progress
+			iod = 0.06;
+			convergence = 5.0;
 		}
 	};
 
@@ -125,11 +132,12 @@ public:
 
 private:
 	Color clear_color;
-	void _draw_viewport(Viewport *p_viewport);
+	void _draw_viewport(Viewport *p_viewport, int p_eye = 0);
 
 public:
 	RID viewport_create();
 
+	void viewport_set_is_stereo(RID p_viewport, bool p_is_stereo);
 	void viewport_set_size(RID p_viewport, int p_width, int p_height);
 
 	void viewport_attach_to_screen(RID p_viewport, const Rect2 &p_rect = Rect2(), int p_screen = 0);

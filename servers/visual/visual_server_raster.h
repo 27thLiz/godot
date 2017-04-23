@@ -888,6 +888,7 @@ public:
 
 	BIND0R(RID, viewport_create)
 
+	BIND2(viewport_set_is_stereo, RID, bool)
 	BIND3(viewport_set_size, RID, int, int)
 
 	BIND2(viewport_set_active, RID, bool)

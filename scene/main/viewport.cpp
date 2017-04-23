@@ -95,7 +95,11 @@ NodePath ViewportTexture::get_viewport_path_in_scene() const {
 int ViewportTexture::get_width() const {
 
 	ERR_FAIL_COND_V(!vp, 0);
-	return vp->size.width;
+	if (vp->is_stereo()) {
+		return vp->size.width * 2.0;
+	} else {
+		return vp->size.width;
+	};
 }
 int ViewportTexture::get_height() const {
 
@@ -105,7 +109,13 @@ int ViewportTexture::get_height() const {
 Size2 ViewportTexture::get_size() const {
 
 	ERR_FAIL_COND_V(!vp, Size2());
-	return vp->size;
+
+	Size2 size = vp->size;
+	if (vp->is_stereo()) {
+		size.x *= 2.0;
+	};
+
+	return size;
 }
 RID ViewportTexture::get_rid() const {
 
@@ -693,6 +703,25 @@ void Viewport::_notification(int p_what) {
 RID Viewport::get_viewport_rid() const {
 
 	return viewport;
+}
+
+void Viewport::set_is_stereo(bool p_is_stereo) {
+	stereo = p_is_stereo;
+
+	VS::get_singleton()->viewport_set_is_stereo(viewport, stereo);
+	if (!stereo) {
+		// our AR/VR interface could have overridden this so make sure we set it back
+		VS::get_singleton()->viewport_set_size(viewport, size.width, size.height);
+	}
+
+	_update_rect();
+	_update_stretch_transform();
+
+	emit_signal("size_changed");
+}
+
+bool Viewport::is_stereo() {
+	return stereo;
 }
 
 void Viewport::set_size(const Size2 &p_size) {
@@ -2518,6 +2547,9 @@ bool Viewport::get_hdr() const {
 
 void Viewport::_bind_methods() {
 
+	ClassDB::bind_method(D_METHOD("set_is_stereo", "enable"), &Viewport::set_is_stereo);
+	ClassDB::bind_method(D_METHOD("is_stereo"), &Viewport::is_stereo);
+
 	ClassDB::bind_method(D_METHOD("set_size", "size"), &Viewport::set_size);
 	ClassDB::bind_method(D_METHOD("get_size"), &Viewport::get_size);
 	ClassDB::bind_method(D_METHOD("set_world_2d", "world_2d:World2D"), &Viewport::set_world_2d);
@@ -2613,6 +2645,8 @@ void Viewport::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_shadow_atlas_quadrant_subdiv", "quadrant", "subdiv"), &Viewport::set_shadow_atlas_quadrant_subdiv);
 	ClassDB::bind_method(D_METHOD("get_shadow_atlas_quadrant_subdiv", "quadrant"), &Viewport::get_shadow_atlas_quadrant_subdiv);
 
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "stereo"), "set_is_stereo", "is_stereo");
+
 	ADD_PROPERTY(PropertyInfo(Variant::RECT2, "size"), "set_size", "get_size");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "own_world"), "set_use_own_world", "is_using_own_world");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "world", PROPERTY_HINT_RESOURCE_TYPE, "World"), "set_world", "get_world");
@@ -2683,6 +2717,7 @@ Viewport::Viewport() {
 	parent = NULL;
 	listener = NULL;
 	camera = NULL;
+	stereo = false;
 	size_override = false;
 	size_override_stretch = false;
 	size_override_size = Size2(1, 1);

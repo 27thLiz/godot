@@ -940,8 +940,8 @@ public:
 
 	virtual void initialize() = 0;
 	virtual void begin_frame() = 0;
-	virtual void set_current_render_target(RID p_render_target) = 0;
-	virtual void restore_render_target() = 0;
+	virtual void set_current_render_target(RID p_render_target, int p_eye = 0) = 0;
+	virtual void restore_render_target(int p_eye = 0) = 0;
 	virtual void clear_render_target(const Color &p_color) = 0;
 	virtual void blit_render_target_to_screen(RID p_render_target, const Rect2 &p_screen_rect, int p_screen = 0) = 0;
 	virtual void end_frame() = 0;

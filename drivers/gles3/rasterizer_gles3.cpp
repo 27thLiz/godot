@@ -221,10 +221,10 @@ void RasterizerGLES3::begin_frame() {
 	scene->iteration();
 }
 
-void RasterizerGLES3::set_current_render_target(RID p_render_target) {
+void RasterizerGLES3::set_current_render_target(RID p_render_target, int p_eye) {
 
-	if (!p_render_target.is_valid() && storage->frame.current_rt && storage->frame.clear_request) {
-		//handle pending clear request, if the framebuffer was not cleared
+	if (!p_render_target.is_valid() && storage->frame.current_rt && storage->frame.clear_request && p_eye != 2) {
+		//handle pending clear request, if the framebuffer was not cleared (for a stereo buffer this clears both eyes, hence we ignore this on p_eye == 2)
 		glBindFramebuffer(GL_FRAMEBUFFER, storage->frame.current_rt->fbo);
 		print_line("unbind clear of: " + storage->frame.clear_request_color);
 		glClearColor(
@@ -245,9 +245,18 @@ void RasterizerGLES3::set_current_render_target(RID p_render_target) {
 		storage->frame.current_rt = rt;
 		storage->frame.clear_request = false;
 
-		glViewport(0, 0, rt->width, rt->height);
-
+		if (p_eye == 1) { // left
+			//			printf("Left eye %li, %li\n", rt->width / 2, rt->height);
+			glViewport(0, 0, rt->width / 2, rt->height);
+		} else if (p_eye == 2) { // right
+			glViewport(rt->width / 2, 0, rt->width / 2, rt->height);
+		} else { // mono
+			glViewport(0, 0, rt->width, rt->height);
+		}
 	} else {
+		///@TODO once we support stereo mode on our main viewport we need to enhance this logic to detect if we have HW stereo buffer
+		// support and use the right buffer. It does not make sense to do left/right for HMDs due to the need for lens distortion shaders
+
 		storage->frame.current_rt = NULL;
 		storage->frame.clear_request = false;
 		glViewport(0, 0, OS::get_singleton()->get_window_size().width, OS::get_singleton()->get_window_size().height);
@@ -255,12 +264,19 @@ void RasterizerGLES3::set_current_render_target(RID p_render_target) {
 	}
 }
 
-void RasterizerGLES3::restore_render_target() {
+void RasterizerGLES3::restore_render_target(int p_eye) {
 
 	ERR_FAIL_COND(storage->frame.current_rt == NULL);
 	RasterizerStorageGLES3::RenderTarget *rt = storage->frame.current_rt;
 	glBindFramebuffer(GL_FRAMEBUFFER, rt->fbo);
-	glViewport(0, 0, rt->width, rt->height);
+	if (p_eye == 1) { // left
+		//		printf("Restore left eye %li, %li\n", rt->width / 2, rt->height);
+		glViewport(0, 0, rt->width / 2, rt->height);
+	} else if (p_eye == 2) { // right
+		glViewport(rt->width / 2, 0, rt->width / 2, rt->height);
+	} else { // mono
+		glViewport(0, 0, rt->width, rt->height);
+	}
 }
 
 void RasterizerGLES3::clear_render_target(const Color &p_color) {

@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  rasterizer_gles3.h                                                   */
+/*  mobile_interface.h                                                   */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -27,43 +27,62 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
-#ifndef RASTERIZERGLES3_H
-#define RASTERIZERGLES3_H
+#ifndef MOBILE_INTERFACE_H
+#define MOBILE_INTERFACE_H
 
-#include "rasterizer_canvas_gles3.h"
-#include "rasterizer_scene_gles3.h"
-#include "rasterizer_storage_gles3.h"
-#include "servers/visual/rasterizer.h"
+#include "servers/arvr/arvr_interface.h"
+#include "servers/arvr/arvr_positional_tracker.h"
 
-class RasterizerGLES3 : public Rasterizer {
+/*
+	The mobile interface is a native VR interface that can be used on Android and iOS phones.
+	It contains a basic implementation supporting 3DOF tracking if a gyroscope and accelerometer are
+	present and sets up the proper projection matrices based on the values provided.
 
-	static Rasterizer *_create_current();
+	We're planning to eventually do separate interfaces towards mobile SDKs that have far more capabilities and
+	do not rely on the user providing most of these settings (though enhancing this with auto detection features
+	based on the device we're running on would be cool). I'm mostly adding this as an example or base plate for
+	more advanced interfaces. 
 
-	RasterizerStorageGLES3 *storage;
-	RasterizerCanvasGLES3 *canvas;
-	RasterizerSceneGLES3 *scene;
+	@TODO: Currently this relies on the lens distortion being applied within Godot when the viewport is rendered through a sprite
+*/
+
+class MobileInterface : public ArVrInterface {
+	GDCLASS(MobileInterface, ArVrInterface);
+
+private:
+	ArVrPositionalTracker *hmd_tracker;
+
+	real_t intraocular_dist;
+	real_t display_width;
+	real_t display_to_lens;
+	real_t oversample;
+
+	//@TODO not yet used, these are needed in our distortion shader...
+	real_t k1;
+	real_t k2;
+
+protected:
+	static void _bind_methods();
 
 public:
-	virtual RasterizerStorage *get_storage();
-	virtual RasterizerCanvas *get_canvas();
-	virtual RasterizerScene *get_scene();
+	virtual bool is_installed();
+	virtual bool supports_hmd();
+	virtual bool hmd_is_present();
 
-	virtual void set_boot_image(const Ref<Image> &p_image, const Color &p_color, bool p_scale);
+	virtual bool is_initialized();
+	virtual bool initialize();
+	virtual void uninitialize();
 
-	virtual void initialize();
-	virtual void begin_frame();
-	virtual void set_current_render_target(RID p_render_target, int p_eye = 0);
-	virtual void restore_render_target(int p_eye = 0);
-	virtual void clear_render_target(const Color &p_color);
-	virtual void blit_render_target_to_screen(RID p_render_target, const Rect2 &p_screen_rect, int p_screen = 0);
-	virtual void end_frame();
-	virtual void finalize();
+	virtual Size2 get_recommended_render_targetsize();
+	virtual Transform get_transform_for_eye(ArVrInterface::Eyes p_eye, const Transform &p_cam_transform);
+	virtual CameraMatrix get_projection_for_eye(ArVrInterface::Eyes p_eye, real_t p_aspect, real_t p_z_near, real_t p_z_far);
 
-	static void make_current();
+	virtual bool handles_output();
+	virtual void commit_viewport(RID p_render_target_texture);
 
-	static void register_config();
-	RasterizerGLES3();
-	~RasterizerGLES3();
+	virtual void process(float p_delta_time);
+
+	MobileInterface();
 };
 
-#endif // RASTERIZERGLES3_H
+#endif

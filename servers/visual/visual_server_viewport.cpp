@@ -29,11 +29,12 @@
 /*************************************************************************/
 #include "visual_server_viewport.h"
 #include "global_config.h"
+#include "servers/arvr/arvr_interface.h"
 #include "visual_server_canvas.h"
 #include "visual_server_global.h"
 #include "visual_server_scene.h"
 
-void VisualServerViewport::_draw_viewport(Viewport *p_viewport) {
+void VisualServerViewport::_draw_viewport(Viewport *p_viewport, int p_eye) {
 
 /* Camera should always be BEFORE any other 3D */
 #if 0
@@ -81,6 +82,8 @@ void VisualServerViewport::_draw_viewport(Viewport *p_viewport) {
 	}
 #endif
 
+	ArVrInterface *arvr_interface = ArVrServer::get_singleton()->get_primary_interface();
+
 	if (p_viewport->clear_mode != VS::VIEWPORT_CLEAR_NEVER) {
 		VSG::rasterizer->clear_render_target(clear_color);
 		if (p_viewport->clear_mode == VS::VIEWPORT_CLEAR_ONLY_NEXT_FRAME) {
@@ -89,8 +92,14 @@ void VisualServerViewport::_draw_viewport(Viewport *p_viewport) {
 	}
 
 	if (!p_viewport->disable_3d && p_viewport->camera.is_valid()) {
-
-		VSG::scene->render_camera(p_viewport->camera, p_viewport->scenario, p_viewport->size, p_viewport->shadow_atlas);
+		if (!p_viewport->is_stereo) {
+			VSG::scene->render_camera(p_viewport->camera, p_viewport->scenario, p_viewport->size, p_viewport->shadow_atlas);
+		} else if (arvr_interface != NULL) {
+			VSG::scene->render_camera(arvr_interface, p_eye == 1 ? ArVrInterface::EYE_LEFT : ArVrInterface::EYE_RIGHT, p_viewport->camera, p_viewport->scenario, p_viewport->size, p_viewport->shadow_atlas);
+		} else {
+			// render stereo for 3DTV
+			VSG::scene->render_camera(p_viewport->camera, p_viewport->scenario, p_viewport->size, p_viewport->shadow_atlas, p_viewport->iod, p_viewport->convergence, p_eye);
+		}
 	}
 
 	if (!p_viewport->hide_canvas) {
@@ -197,8 +206,8 @@ void VisualServerViewport::_draw_viewport(Viewport *p_viewport) {
 			//VSG::canvas_render->reset_canvas();
 		}
 
-		VSG::rasterizer->restore_render_target();
-
+		VSG::rasterizer->restore_render_target(p_eye);
+//
 #if 0
 		if (scenario_draw_canvas_bg && canvas_map.front() && canvas_map.front()->key().layer>scenario_canvas_max_layer) {
 
@@ -248,15 +257,25 @@ void VisualServerViewport::_draw_viewport(Viewport *p_viewport) {
 }
 
 void VisualServerViewport::draw_viewports() {
+	// get our arvr interface in case we need it
+	ArVrInterface *arvr_interface = ArVrServer::get_singleton()->get_primary_interface();
+	if (arvr_interface != NULL) {
+		// update our positioning information as late as possible...
+		float delta = 0; ///@TODO need to set this, time accurately since last time we called this!
+		arvr_interface->process(delta);
 
-	//sort viewports
-
-	//draw viewports
+		///@TODO we should also time from here until we finish rendering (so the end of this method)
+		// and communicate the average over say the last 10 frames to arvr_interface->process
+		// This information can be used to estimate where the viewer will be by the time we commit the
+		// result to display and bring latency down even more (OpenVR has build in support for this).
+	}
 
 	clear_color = GLOBAL_GET("rendering/viewport/default_clear_color");
 
+	//sort viewports
 	active_viewports.sort_custom<ViewportSort>();
 
+	//draw viewports
 	for (int i = 0; i < active_viewports.size(); i++) {
 
 		Viewport *vp = active_viewports[i];
@@ -271,10 +290,56 @@ void VisualServerViewport::draw_viewports() {
 		if (!visible)
 			continue;
 
-		VSG::rasterizer->set_current_render_target(vp->render_target);
-		_draw_viewport(vp);
+		if (vp->is_stereo) {
+			if (vp->render_target.is_valid()) {
+				// If we're rendering for our ar/vr we override our target size
+				if (arvr_interface != NULL) {
+					///@TODO maybe instead of changing the size in our struct,
+					vp->size = arvr_interface->get_recommended_render_targetsize();
+				}
+
+				// double the width, left buffer and right buffer...
+				VSG::storage->render_target_set_size(vp->render_target, vp->size.x * 2.0, vp->size.y);
+			} else {
+				///@TODO not supported yet but if we are rendering directly to screen we either need to fix our size to half our screen
+				// or only allow this if we have hardware left/right buffers.
+				// This really is only applicable for 3DTV stereoscopic rendering as with VR we always require an intermediate buffer
+				// so we can apply our lens distortion
+			}
+
+			// render left eye
+			VSG::rasterizer->set_current_render_target(vp->render_target, 1);
+			_draw_viewport(vp, 1);
+
+			// render right eye
+			VSG::rasterizer->set_current_render_target(vp->render_target, 2);
+			_draw_viewport(vp, 2);
+
+			// send to arvr_interface, we're assuming no 2D stuff is being rendered
+			if (arvr_interface == NULL) {
+				// leave it up to viewport_to_screen_rect to deside what to do here
+			} else if (arvr_interface->handles_output()) {
+				RID texture = VSG::storage->render_target_get_texture(vp->render_target);
+				arvr_interface->commit_viewport(texture);
+			} else {
+				///@TODO there is an argument for implementing our lens distortion logic here and always blitting out to screen...
+			}
+		} else {
+			VSG::rasterizer->set_current_render_target(vp->render_target);
+			_draw_viewport(vp);
+		}
 
 		if (vp->viewport_to_screen_rect != Rect2()) {
+			///@TODO if this is a stereo viewport we need to adjust this to account for our double width buffer.
+			// We have the following scenarios we need to support here:
+			// - if arvr_interface is not null and handles_output returns true we should simply blit the left eye (or make that a setting)
+			// - if arvr_interface is not null and handles_output returns false we should blit both eyes and apply our lens distortion shader
+			// - if arvr_interface is null we should either show the buffer as is (so both eyes side by side) or if we have HW left and right
+			//   buffers enabled we should blit the left eye to the left buffer and right eye to the right buffer.
+			//
+			// Note also that if stereo is OFF but we have HW left and right buffers enabled we should blit our buffer to both left and right
+			// buffers.
+
 			//copy to screen if set as such
 			VSG::rasterizer->set_current_render_target(RID());
 			VSG::rasterizer->blit_render_target_to_screen(vp->render_target, vp->viewport_to_screen_rect, vp->viewport_to_screen);
@@ -299,6 +364,16 @@ RID VisualServerViewport::viewport_create() {
 	viewport->shadow_atlas = VSG::scene_render->shadow_atlas_create();
 
 	return rid;
+}
+
+void VisualServerViewport::viewport_set_is_stereo(RID p_viewport, bool p_is_stereo) {
+	Viewport *viewport = viewport_owner.getornull(p_viewport);
+	ERR_FAIL_COND(!viewport);
+
+	viewport->is_stereo = p_is_stereo;
+	if (!viewport->is_stereo) {
+		VSG::storage->render_target_set_size(viewport->render_target, viewport->size.width, viewport->size.height);
+	}
 }
 
 void VisualServerViewport::viewport_set_size(RID p_viewport, int p_width, int p_height) {
