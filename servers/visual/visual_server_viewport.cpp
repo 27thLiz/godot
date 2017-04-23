@@ -33,7 +33,7 @@
 #include "visual_server_global.h"
 #include "visual_server_scene.h"
 
-void VisualServerViewport::_draw_viewport(Viewport *p_viewport) {
+void VisualServerViewport::_draw_viewport(Viewport *p_viewport, ArVrInterface::Eyes p_eye) {
 
 /* Camera should always be BEFORE any other 3D */
 #if 0
@@ -89,8 +89,13 @@ void VisualServerViewport::_draw_viewport(Viewport *p_viewport) {
 	}
 
 	if (!p_viewport->disable_3d && !p_viewport->disable_3d_by_usage && p_viewport->camera.is_valid()) {
+		Ref<ArVrInterface> arvr_interface = ArVrServer::get_singleton()->get_primary_interface();
 
-		VSG::scene->render_camera(p_viewport->camera, p_viewport->scenario, p_viewport->size, p_viewport->shadow_atlas);
+		if (p_viewport->use_arvr && arvr_interface != NULL) {
+			VSG::scene->render_camera(arvr_interface, p_eye, p_viewport->camera, p_viewport->scenario, p_viewport->size, p_viewport->shadow_atlas);
+		} else {
+			VSG::scene->render_camera(p_viewport->camera, p_viewport->scenario, p_viewport->size, p_viewport->shadow_atlas);
+		}
 	}
 
 	if (!p_viewport->hide_canvas) {
@@ -198,7 +203,7 @@ void VisualServerViewport::_draw_viewport(Viewport *p_viewport) {
 		}
 
 		VSG::rasterizer->restore_render_target();
-
+//
 #if 0
 		if (scenario_draw_canvas_bg && canvas_map.front() && canvas_map.front()->key().layer>scenario_canvas_max_layer) {
 
@@ -248,15 +253,25 @@ void VisualServerViewport::_draw_viewport(Viewport *p_viewport) {
 }
 
 void VisualServerViewport::draw_viewports() {
+	// get our arvr interface in case we need it
+	Ref<ArVrInterface> arvr_interface = ArVrServer::get_singleton()->get_primary_interface();
+	if (arvr_interface != NULL) {
+		// update our positioning information as late as possible...
+		float delta = 0; ///@TODO need to set this, time accurately since last time we called this!
+		arvr_interface->process(delta);
 
-	//sort viewports
-
-	//draw viewports
+		///@TODO we should also time from here until we finish rendering (so the end of this method)
+		// and communicate the average over say the last 10 frames to arvr_interface->process
+		// This information can be used to estimate where the viewer will be by the time we commit the
+		// result to display and bring latency down even more (OpenVR has build in support for this).
+	}
 
 	clear_color = GLOBAL_GET("rendering/viewport/default_clear_color");
 
+	//sort viewports
 	active_viewports.sort_custom<ViewportSort>();
 
+	//draw viewports
 	for (int i = 0; i < active_viewports.size(); i++) {
 
 		Viewport *vp = active_viewports[i];
@@ -271,8 +286,24 @@ void VisualServerViewport::draw_viewports() {
 		if (!visible)
 			continue;
 
-		VSG::rasterizer->set_current_render_target(vp->render_target);
-		_draw_viewport(vp);
+		if (vp->use_arvr && arvr_interface != NULL) {
+			// render mono or left eye first
+			ArVrInterface::Eyes leftOrMono = arvr_interface->is_stereo() ? ArVrInterface::EYE_LEFT : ArVrInterface::EYE_MONO;
+			VSG::rasterizer->set_current_render_target(vp->render_target);
+			_draw_viewport(vp, leftOrMono);
+			arvr_interface->commit_for_eye(leftOrMono, vp->render_target);
+
+			// render right eye
+			if (leftOrMono == ArVrInterface::EYE_LEFT) {
+				VSG::rasterizer->set_current_render_target(vp->render_target);
+				_draw_viewport(vp, ArVrInterface::EYE_RIGHT);
+				arvr_interface->commit_for_eye(ArVrInterface::EYE_RIGHT, vp->render_target);
+			}
+		} else {
+			// good old fashioned render
+			VSG::rasterizer->set_current_render_target(vp->render_target);
+			_draw_viewport(vp);
+		}
 
 		if (vp->viewport_to_screen_rect != Rect2()) {
 			//copy to screen if set as such
@@ -299,6 +330,13 @@ RID VisualServerViewport::viewport_create() {
 	viewport->shadow_atlas = VSG::scene_render->shadow_atlas_create();
 
 	return rid;
+}
+
+void VisualServerViewport::viewport_set_use_arvr(RID p_viewport, bool p_use_arvr) {
+	Viewport *viewport = viewport_owner.getornull(p_viewport);
+	ERR_FAIL_COND(!viewport);
+
+	viewport->use_arvr = p_use_arvr;
 }
 
 void VisualServerViewport::viewport_set_size(RID p_viewport, int p_width, int p_height) {

@@ -130,6 +130,8 @@ private:
 	Listener *listener;
 	Set<Listener *> listeners;
 
+	bool arvr;
+
 	Camera *camera;
 	Set<Camera *> cameras;
 
@@ -328,6 +330,9 @@ protected:
 public:
 	Listener *get_listener() const;
 	Camera *get_camera() const;
+
+	void set_use_arvr(bool p_use_arvr);
+	bool use_arvr();
 
 	void set_as_audio_listener(bool p_enable);
 	bool is_audio_listener() const;

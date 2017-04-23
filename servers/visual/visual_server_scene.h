@@ -36,9 +36,9 @@
 #include "geometry.h"
 #include "octree.h"
 #include "os/semaphore.h"
-#include "os/semaphore.h"
 #include "os/thread.h"
 #include "self_list.h"
+#include "servers/arvr/arvr_interface.h"
 
 class VisualServerScene {
 public:
@@ -521,6 +521,8 @@ public:
 	void _render_scene(const Transform p_cam_transform, const CameraMatrix &p_cam_projection, bool p_cam_orthogonal, RID p_force_environment, uint32_t p_visible_layers, RID p_scenario, RID p_shadow_atlas, RID p_reflection_probe, int p_reflection_probe_pass);
 
 	void render_camera(RID p_camera, RID p_scenario, Size2 p_viewport_size, RID p_shadow_atlas);
+	void render_camera(RID p_camera, RID p_scenario, Size2 p_viewport_size, RID p_shadow_atlas, real_t p_iod, real_t p_convergence, int p_eye);
+	void render_camera(Ref<ArVrInterface> &p_interface, ArVrInterface::Eyes p_eye, RID p_camera, RID p_scenario, Size2 p_viewport_size, RID p_shadow_atlas);
 	void update_dirty_instances();
 
 	//probes

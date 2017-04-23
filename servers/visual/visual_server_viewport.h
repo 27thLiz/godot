@@ -32,6 +32,7 @@
 
 #include "rasterizer.h"
 #include "self_list.h"
+#include "servers/arvr/arvr_interface.h"
 #include "servers/visual_server.h"
 
 class VisualServerViewport {
@@ -43,6 +44,8 @@ public:
 
 		RID self;
 		RID parent;
+
+		bool use_arvr; /* use arvr interface to override camera positioning and projection matrices and control output */
 
 		Size2i size;
 		RID camera;
@@ -103,6 +106,7 @@ public:
 			shadow_atlas_size = 0;
 			disable_3d = false;
 			disable_3d_by_usage = false;
+			use_arvr = false;
 		}
 	};
 
@@ -127,10 +131,12 @@ public:
 
 private:
 	Color clear_color;
-	void _draw_viewport(Viewport *p_viewport);
+	void _draw_viewport(Viewport *p_viewport, ArVrInterface::Eyes p_eye = ArVrInterface::EYE_MONO);
 
 public:
 	RID viewport_create();
+
+	void viewport_set_use_arvr(RID p_viewport, bool p_use_arvr);
 
 	void viewport_set_size(RID p_viewport, int p_width, int p_height);
 
