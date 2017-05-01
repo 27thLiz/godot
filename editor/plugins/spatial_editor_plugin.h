@@ -113,6 +113,7 @@ private:
 	bool transforming;
 	bool orthogonal;
 	float gizmo_scale;
+	real_t freelook_speed;
 
 	struct _RayResult {
 
@@ -168,7 +169,8 @@ private:
 		NAVIGATION_NONE,
 		NAVIGATION_PAN,
 		NAVIGATION_ZOOM,
-		NAVIGATION_ORBIT
+		NAVIGATION_ORBIT,
+		NAVIGATION_LOOK
 	};
 	enum TransformMode {
 		TRANSFORM_NONE,
@@ -203,7 +205,7 @@ private:
 
 	struct Cursor {
 
-		Vector3 cursor_pos;
+		//Vector3 cursor_pos; // TODO Lots of dead code associated with this, delete it?
 
 		Vector3 pos;
 		float x_rot, y_rot, distance;
@@ -227,10 +229,12 @@ private:
 
 	//
 	void _update_camera();
+	Transform to_camera_transform(const Cursor &p_cursor) const;
 	void _draw();
 
 	void _smouseenter();
 	void _sinput(const InputEvent &p_ie);
+	void _update_freelook(real_t delta);
 	SpatialEditor *spatial_editor;
 
 	Camera *previewing;

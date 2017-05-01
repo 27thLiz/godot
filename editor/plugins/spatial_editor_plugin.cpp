@@ -58,20 +58,26 @@ void SpatialEditorViewport::_update_camera() {
 	} else
 		camera->set_perspective(get_fov(), get_znear(), get_zfar());
 
-	Transform camera_transform;
-	camera_transform.translate(cursor.pos);
-	camera_transform.basis.rotate(Vector3(1, 0, 0), -cursor.x_rot);
-	camera_transform.basis.rotate(Vector3(0, 1, 0), -cursor.y_rot);
-
-	if (orthogonal)
-		camera_transform.translate(0, 0, 4096);
-	else
-		camera_transform.translate(0, 0, cursor.distance);
+	Transform camera_transform = to_camera_transform(cursor);
 
 	if (camera->get_global_transform() != camera_transform) {
 		camera->set_global_transform(camera_transform);
 		update_transform_gizmo_view();
 	}
+}
+
+Transform SpatialEditorViewport::to_camera_transform(const Cursor &p_cursor) const {
+	Transform camera_transform;
+	camera_transform.translate(p_cursor.pos);
+	camera_transform.basis.rotate(Vector3(1, 0, 0), -p_cursor.x_rot);
+	camera_transform.basis.rotate(Vector3(0, 1, 0), -p_cursor.y_rot);
+
+	if (orthogonal)
+		camera_transform.translate(0, 0, 4096);
+	else
+		camera_transform.translate(0, 0, p_cursor.distance);
+
+	return camera_transform;
 }
 
 String SpatialEditorGizmo::get_handle_name(int p_idx) const {
@@ -669,8 +675,7 @@ void SpatialEditorViewport::_list_select(InputEventMouseButton b) {
 			selection_menu->add_item(spat->get_name());
 			selection_menu->set_item_icon(i, icon);
 			selection_menu->set_item_metadata(i, node_path);
-			selection_menu->set_item_tooltip(i, String(spat->get_name()) +
-														"\nType: " + spat->get_class() + "\nPath: " + node_path);
+			selection_menu->set_item_tooltip(i, String(spat->get_name()) + "\nType: " + spat->get_class() + "\nPath: " + node_path);
 		}
 
 		selection_menu->set_global_position(Vector2(b.global_x, b.global_y));
@@ -729,7 +734,7 @@ void SpatialEditorViewport::_sinput(const InputEvent &p_event) {
 
 					if (_edit.mode == TRANSFORM_NONE && b.pressed) {
 
-						Plane cursor_plane(cursor.cursor_pos, _get_camera_normal());
+						//Plane cursor_plane(cursor.cursor_pos, _get_camera_normal());
 
 						Vector3 ray_origin = _get_ray_pos(Vector2(b.x, b.y));
 						Vector3 ray_dir = _get_ray(Vector2(b.x, b.y));
@@ -789,15 +794,15 @@ void SpatialEditorViewport::_sinput(const InputEvent &p_event) {
 								//cursor.cursor_pos=ray_origin+ray_dir*min_d;
 								//VisualServer::get_singleton()->instance_set_transform(cursor_instance,Transform(Matrix3(),cursor.cursor_pos));
 							}
-
-						} else {
+						}
+						/*else {
 							Vector3 new_pos;
 							if (cursor_plane.intersects_ray(ray_origin, ray_dir, &new_pos)) {
 
 								//cursor.cursor_pos=new_pos;
 								//VisualServer::get_singleton()->instance_set_transform(cursor_instance,Transform(Matrix3(),cursor.cursor_pos));
 							}
-						}
+						}*/
 
 						if (b.mod.alt) {
 
@@ -1344,6 +1349,8 @@ void SpatialEditorViewport::_sinput(const InputEvent &p_event) {
 
 				if (nav_scheme == NAVIGATION_MAYA && m.mod.alt) {
 					nav_mode = NAVIGATION_ZOOM;
+				} else {
+					nav_mode = NAVIGATION_LOOK;
 				}
 
 			} else if (m.button_mask & 4) {
@@ -1453,6 +1460,29 @@ void SpatialEditorViewport::_sinput(const InputEvent &p_event) {
 					_update_name();
 				} break;
 
+				case NAVIGATION_LOOK: {
+					// Freelook only works properly in perspective.
+					// It technically works too in ortho, but it's awful for a user due to fov being near zero
+					if (!orthogonal) {
+						cursor.x_rot += m.relative_y / 120.0;
+						cursor.y_rot += m.relative_x / 120.0;
+						if (cursor.x_rot > Math_PI / 2.0)
+							cursor.x_rot = Math_PI / 2.0;
+						if (cursor.x_rot < -Math_PI / 2.0)
+							cursor.x_rot = -Math_PI / 2.0;
+
+						// Look is like Orbit, except the cursor translates, not the camera
+						Transform camera_transform = to_camera_transform(cursor);
+						Vector3 pos = camera_transform.xform(Vector3(0, 0, 0));
+						Vector3 diff = camera->get_translation() - pos;
+						cursor.pos += diff;
+
+						name = "";
+						_update_name();
+					}
+
+				} break;
+
 				default: {}
 			}
 		} break;
@@ -1543,6 +1573,64 @@ void SpatialEditorViewport::_sinput(const InputEvent &p_event) {
 	}
 }
 
+void SpatialEditorViewport::_update_freelook(real_t delta) {
+
+	const Input &input = *Input::get_singleton();
+
+	if (!input.is_mouse_button_pressed(BUTTON_RIGHT))
+		return;
+
+	Vector3 forward = camera->get_transform().basis.xform(Vector3(0, 0, -1));
+	Vector3 right = camera->get_transform().basis.xform(Vector3(1, 0, 0));
+
+	int key_left = ED_SHORTCUT("spatial_editor/freelook_left", TTR("Freelook Left"), KEY_A)->get_shortcut().key.scancode;
+	int key_right = ED_SHORTCUT("spatial_editor/freelook_right", TTR("Freelook Right"), KEY_D)->get_shortcut().key.scancode;
+	int key_forward = ED_SHORTCUT("spatial_editor/freelook_forward", TTR("Freelook Forward"), KEY_W)->get_shortcut().key.scancode;
+	int key_backwards = ED_SHORTCUT("spatial_editor/freelook_backwards", TTR("Freelook Backwards"), KEY_S)->get_shortcut().key.scancode;
+	int key_speed_modifier = ED_SHORTCUT("spatial_editor/freelook_speed_modifier", TTR("Freelook Speed Modifier"), KEY_SHIFT)->get_shortcut().key.scancode;
+
+	Vector3 velocity;
+	bool pressed = false;
+	bool speed_modifier = false;
+
+	if (input.is_key_pressed(key_left)) {
+		velocity -= right;
+		pressed = true;
+	}
+	if (input.is_key_pressed(key_right)) {
+		velocity += right;
+		pressed = true;
+	}
+	if (input.is_key_pressed(key_forward)) {
+		velocity += forward;
+		pressed = true;
+	}
+	if (input.is_key_pressed(key_backwards)) {
+		velocity -= forward;
+		pressed = true;
+	}
+	if (input.is_key_pressed(key_speed_modifier)) {
+		speed_modifier = true;
+	}
+
+	const EditorSettings &s = *EditorSettings::get_singleton();
+
+	real_t base_speed = s.get("editors/3d/freelook_base_speed");
+	real_t acceleration = s.get("editors/3d/freelook_acceleration");
+	real_t max_speed = s.get("editors/3d/freelook_max_speed");
+	real_t modifier_speed_factor = s.get("editors/3d/freelook_modifier_speed_factor");
+
+	if (pressed) {
+		velocity.normalize();
+		freelook_speed += acceleration * delta;
+		if (freelook_speed > max_speed)
+			freelook_speed = max_speed;
+		cursor.pos += velocity * ((freelook_speed * (speed_modifier ? modifier_speed_factor : 1.0) * delta));
+	} else {
+		freelook_speed = base_speed;
+	}
+}
+
 void SpatialEditorViewport::set_message(String p_message, float p_time) {
 
 	message = p_message;
@@ -1578,6 +1666,8 @@ void SpatialEditorViewport::_notification(int p_what) {
 
 		}
 		*/
+
+		_update_freelook(get_tree()->get_idle_process_time());
 
 		_update_camera();
 
@@ -2204,6 +2294,7 @@ SpatialEditorViewport::SpatialEditorViewport(SpatialEditor *p_spatial_editor, Ed
 	previewing = NULL;
 	preview = NULL;
 	gizmo_scale = 1.0;
+	freelook_speed = 0;
 
 	selection_menu = memnew(PopupMenu);
 	add_child(selection_menu);
