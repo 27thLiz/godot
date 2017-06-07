@@ -32,6 +32,7 @@
 
 #include "arvr/arvr_interface.h"
 #include "arvr/arvr_positional_tracker.h"
+#include "arvr/arvr_script_interface.h"
 #include "arvr/mobile_interface.h"
 #include "arvr_server.h"
 #include "audio/audio_effect.h"
@@ -99,6 +100,7 @@ void register_server_types() {
 
 	ClassDB::register_virtual_class<ArVrInterface>();
 	ClassDB::register_class<ArVrPositionalTracker>();
+	ClassDB::register_class<ArVrScriptInterface>();
 
 	ClassDB::register_virtual_class<AudioStream>();
 	ClassDB::register_virtual_class<AudioStreamPlayback>();

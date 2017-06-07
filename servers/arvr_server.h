@@ -31,8 +31,8 @@
 #ifndef ARVR_SERVER_H
 #define ARVR_SERVER_H
 
-#include "object.h"
 #include "os/thread_safe.h"
+#include "reference.h"
 #include "rid.h"
 #include "variant.h"
 
@@ -55,10 +55,10 @@ class ArVrServer : public Object {
 	_THREAD_SAFE_CLASS_
 
 private:
-	Vector<ArVrInterface *> interfaces;
+	Vector<Ref<ArVrInterface> > interfaces;
 	Vector<ArVrPositionalTracker *> trackers;
 
-	ArVrInterface *primary_interface; /* we'll identify one interface as primary, this will be used by our viewports */
+	Ref<ArVrInterface> primary_interface; /* we'll identify one interface as primary, this will be used by our viewports */
 
 	real_t world_scale; /* scale by which we multiply our tracker positions */
 
@@ -84,19 +84,19 @@ public:
 	real_t get_world_scale();
 	void set_world_scale(real_t p_world_scale);
 
-	void add_interface(ArVrInterface *p_interface);
-	void remove_interface(ArVrInterface *p_interface);
+	void add_interface(const Ref<ArVrInterface> &p_interface);
+	void remove_interface(const Ref<ArVrInterface> &p_interface);
 	int get_interface_count() const;
-	ArVrInterface *get_interface(int p_index) const;
-	ArVrInterface *find_interface(const String &p_name) const;
+	Ref<ArVrInterface> get_interface(int p_index) const;
+	Ref<ArVrInterface> find_interface(const String &p_name) const;
 
 	/*
 		note, more then one interface can technically be active, especially on mobile, but only one interface is used for
 		rendering. This interface identifies itself by calling set_primary_interface when it is initialized
 	*/
-	ArVrInterface *get_primary_interface() const;
-	void set_primary_interface(ArVrInterface *p_primary_interface);
-	void clear_primary_interface_if(ArVrInterface *p_primary_interface); /* this is automatically called if an interface destructs */
+	Ref<ArVrInterface> get_primary_interface() const;
+	void set_primary_interface(const Ref<ArVrInterface> &p_primary_interface);
+	void clear_primary_interface_if(const Ref<ArVrInterface> &p_primary_interface); /* this is automatically called if an interface destructs */
 
 	void add_tracker(ArVrPositionalTracker *p_tracker);
 	void remove_tracker(ArVrPositionalTracker *p_tracker);

@@ -1643,7 +1643,7 @@ void VisualServerScene::render_camera(RID p_camera, RID p_scenario, Size2 p_view
 					camera->zfar,
 					camera->vaspect
 
-			);
+					);
 			ortho = true;
 		} break;
 		case Camera::PERSPECTIVE: {
@@ -1655,7 +1655,7 @@ void VisualServerScene::render_camera(RID p_camera, RID p_scenario, Size2 p_view
 					camera->zfar,
 					camera->vaspect
 
-			);
+					);
 			ortho = false;
 
 		} break;
@@ -1689,7 +1689,7 @@ void VisualServerScene::render_camera(RID p_camera, RID p_scenario, Size2 p_view
 	_render_scene(camera->transform, camera_matrix, ortho, camera->env, camera->visible_layers, p_scenario, p_shadow_atlas, RID(), -1);
 }
 
-void VisualServerScene::render_camera(ArVrInterface *p_interface, ArVrInterface::Eyes p_eye, RID p_camera, RID p_scenario, Size2 p_viewport_size, RID p_shadow_atlas) {
+void VisualServerScene::render_camera(Ref<ArVrInterface> &p_interface, ArVrInterface::Eyes p_eye, RID p_camera, RID p_scenario, Size2 p_viewport_size, RID p_shadow_atlas) {
 	// render for AR/VR interface
 
 	Camera *camera = camera_owner.getornull(p_camera);

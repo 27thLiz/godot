@@ -50,6 +50,11 @@ void ArVrServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_tracker_count"), &ArVrServer::get_tracker_count);
 	ClassDB::bind_method(D_METHOD("get_tracker:ArVrPositionalTracker", "idx"), &ArVrServer::get_tracker);
 
+	ClassDB::bind_method(D_METHOD("set_primary_interface"), &ArVrServer::set_primary_interface);
+
+	ClassDB::bind_method(D_METHOD("add_interface"), &ArVrServer::add_interface);
+	ClassDB::bind_method(D_METHOD("remove_interface"), &ArVrServer::remove_interface);
+
 	BIND_CONSTANT(TRACKER_HMD);
 	BIND_CONSTANT(TRACKER_CONTROLLER);
 	BIND_CONSTANT(TRACKER_BASESTATION);
@@ -79,8 +84,8 @@ void ArVrServer::set_world_scale(real_t p_world_scale) {
 	world_scale = p_world_scale;
 };
 
-void ArVrServer::add_interface(ArVrInterface *p_interface) {
-	ERR_FAIL_NULL(p_interface);
+void ArVrServer::add_interface(const Ref<ArVrInterface> &p_interface) {
+	ERR_FAIL_COND(p_interface.is_null());
 
 	///@TODO check if we already have this interface and fail
 
@@ -88,8 +93,8 @@ void ArVrServer::add_interface(ArVrInterface *p_interface) {
 	emit_signal("interface_added", p_interface->get_name());
 };
 
-void ArVrServer::remove_interface(ArVrInterface *p_interface) {
-	ERR_FAIL_NULL(p_interface);
+void ArVrServer::remove_interface(const Ref<ArVrInterface> &p_interface) {
+	ERR_FAIL_COND(p_interface.is_null());
 
 	int idx = -1;
 	for (int i = 0; i < interfaces.size(); i++) {
@@ -111,13 +116,13 @@ int ArVrServer::get_interface_count() const {
 	return interfaces.size();
 };
 
-ArVrInterface *ArVrServer::get_interface(int p_index) const {
+Ref<ArVrInterface> ArVrServer::get_interface(int p_index) const {
 	ERR_FAIL_INDEX_V(p_index, interfaces.size(), NULL);
 
 	return interfaces[p_index];
 };
 
-ArVrInterface *ArVrServer::find_interface(const String &p_name) const {
+Ref<ArVrInterface> ArVrServer::find_interface(const String &p_name) const {
 	int idx = -1;
 	for (int i = 0; i < interfaces.size(); i++) {
 
@@ -169,24 +174,23 @@ ArVrPositionalTracker *ArVrServer::get_tracker(int p_index) const {
 	return trackers[p_index];
 };
 
-ArVrInterface *ArVrServer::get_primary_interface() const {
+Ref<ArVrInterface> ArVrServer::get_primary_interface() const {
 	return primary_interface;
 };
 
-void ArVrServer::set_primary_interface(ArVrInterface *p_primary_interface) {
+void ArVrServer::set_primary_interface(const Ref<ArVrInterface> &p_primary_interface) {
 	primary_interface = p_primary_interface;
 };
 
-void ArVrServer::clear_primary_interface_if(ArVrInterface *p_primary_interface) {
+void ArVrServer::clear_primary_interface_if(const Ref<ArVrInterface> &p_primary_interface) {
 	if (primary_interface == p_primary_interface) {
-		primary_interface = NULL;
+		primary_interface.unref();
 	};
 };
 
 ArVrServer::ArVrServer() {
 	singleton = this;
 	world_scale = 1.0;
-	primary_interface = NULL;
 };
 
 ArVrServer::~ArVrServer() {

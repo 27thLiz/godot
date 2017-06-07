@@ -82,7 +82,7 @@ void VisualServerViewport::_draw_viewport(Viewport *p_viewport, int p_eye) {
 	}
 #endif
 
-	ArVrInterface *arvr_interface = ArVrServer::get_singleton()->get_primary_interface();
+	Ref<ArVrInterface> arvr_interface = ArVrServer::get_singleton()->get_primary_interface();
 
 	if (p_viewport->clear_mode != VS::VIEWPORT_CLEAR_NEVER) {
 		VSG::rasterizer->clear_render_target(clear_color);
@@ -258,7 +258,7 @@ void VisualServerViewport::_draw_viewport(Viewport *p_viewport, int p_eye) {
 
 void VisualServerViewport::draw_viewports() {
 	// get our arvr interface in case we need it
-	ArVrInterface *arvr_interface = ArVrServer::get_singleton()->get_primary_interface();
+	Ref<ArVrInterface> arvr_interface = ArVrServer::get_singleton()->get_primary_interface();
 	if (arvr_interface != NULL) {
 		// update our positioning information as late as possible...
 		float delta = 0; ///@TODO need to set this, time accurately since last time we called this!

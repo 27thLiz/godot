@@ -47,8 +47,8 @@
 	Note that we may make this into a fully instantiable class for GDNative support.
 */
 
-class ArVrInterface : public Object {
-	GDCLASS(ArVrInterface, Object);
+class ArVrInterface : public Reference {
+	GDCLASS(ArVrInterface, Reference);
 
 private:
 	StringName name; // (unique) name of the interface
