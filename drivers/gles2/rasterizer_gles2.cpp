@@ -11168,6 +11168,7 @@ int RasterizerGLES2::get_render_info(VS::RenderInfo p_info) {
 
 void RasterizerGLES2::set_extensions(const char *p_strings) {
 
+	ERR_FAIL_COND(!p_strings);
 	Vector<String> strings = String(p_strings).split(" ",false);
 	for(int i=0;i<strings.size();i++) {
 
